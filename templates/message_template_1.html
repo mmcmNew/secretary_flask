@@ -1,0 +1,15 @@
+<!-------message-template 1 ----------->
+<div class="chat-message-{{ message.position }} pb-4">
+	<div class="chat-avatar ta-c">
+		<img src="static/images/avatars/{{message.avatar}}" class="rounded-circle shadow-sm" alt="message.name" width="40" height="40" style="display: block; margin: 0 auto;"> <!-- Added inline CSS for image centering -->
+		<div class="text-nowrap bg-body-secondary rounded ta-c ps-2 pe-2 shadow-sm">
+			<strong>{{ message.name }}</strong>
+		</div>
+	</div>
+	<div class="bg-light rounded py-1 px-3 m{{ message.position }}-3 ms-1 me-1 border border-1 shadow-sm chat-message-content">
+		{% if message.image %}
+			<img src="{{ url_for('static', filename='images/' + message.image) }}" alt="Chat Image" class="chat-image">
+		{% endif %}
+		<div class="chat-message-text">{{message.text}}<p class="text-sm-start my-1" style="font-size: 0.7em;">{{message.time}}</p></div>
+	</div>
+</div>

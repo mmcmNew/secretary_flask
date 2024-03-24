@@ -1,0 +1,18 @@
+<!-------message-template 2 ----------->
+
+<div class="row message-body">
+	<div class="col-sm-12 message-main-{{ message.position }}">
+		<div class="sender">
+			<strong>{{ message.name }}</strong>
+			{% if message.image %}
+			<img src="{{ url_for('static', filename='images/' + message.image) }}" alt="Chat Image" class="chat-image">
+			{% endif %}
+			<div class="message-text">
+			{{message.text}}
+			</div>
+			<span class="message-time pull-right">
+			{{message.time}}
+			</span>
+		</div>
+	</div>
+</div>

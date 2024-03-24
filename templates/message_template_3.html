@@ -1,0 +1,9 @@
+<!-------message-template 3 ----------->
+<div class="chat-message-{{ message.position }} pb-4">
+	<div class="bg-light rounded py-1 px-3 m{{ message.position }}-3 ms-1 me-1 border border-1 shadow-sm chat-message-content">
+		{% if message.image %}
+			<img src="{{ url_for('static', filename='images/' + message.image) }}" alt="Chat Image" class="chat-image">
+		{% endif %}
+		<div class="chat-message-text">{{message.text}}<p class="text-sm-start my-1" style="font-size: 0.7em;">{{message.time}}</p></div>
+	</div>
+</div>
