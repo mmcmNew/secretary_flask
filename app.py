@@ -1,11 +1,29 @@
+import glob
+import os
 from datetime import datetime
 
 import sqlite3
 from flask import Flask, render_template, jsonify, request
 
 from utilites import process_command, save_to_base
+from text_to_edge_tts import tts
 
 app = Flask(__name__)
+
+
+@app.route('/generate-tts', methods=['POST'])
+def generate_tts():
+    save_path = os.path.join(os.path.dirname(__file__), 'static', 'temp')
+    # Поиск файлов, которые начинаются с 'edge_audio_' и заканчиваются на '.mp3'
+    for file_path in glob.glob(os.path.join(save_path, 'edge_audio_*.mp3')):
+        try:
+            os.remove(file_path)
+            print(f'Файл {file_path} был успешно удален')
+        except OSError as e:
+            print(f'Ошибка при удалении файла {file_path}: {e}')
+    text = request.form['text']
+    audio_path = tts(text) # Генерируем аудио из текста
+    return jsonify(audioUrl=audio_path)
 
 
 @app.route('/tables')
@@ -81,8 +99,8 @@ def new_message():
     text = request.form.get('message')
     message_type = request.form.get('type')
     print(f'message_type: "{message_type}"')
-    # print(text)
-    # если это запрос от пользователя, то формируем вывод в чат
+    print(f'new_message: Список файлов: {request.files}')
+    # для первого запроса формируем вывод в чат
     if message_type == 'request':
         message = {'table_name': 'ChatHistory', 'user_id': 1, 'time': current_time, 'text': text, 'position': 'r'}
         result, error = save_to_base(message)
@@ -91,9 +109,12 @@ def new_message():
         message['name'] = 'Me'
         message['avatar'] = 'me.png'
     else:
-        # если это запрос на ответ секретаря получаем ответ секретаря
+        # при повторном запросе отправляем его секретарю
         users = get_users()
-        ai_answer = process_command(text) or {'user_id': 2, 'text': 'Уточните запрос'}
+        command = {'text': text}
+        if request.files:
+            command['files'] = request.files
+        ai_answer = process_command(command) or {'user_id': 2, 'text': 'Уточните запрос'}
         message = {'table_name': 'ChatHistory', 'user_id': ai_answer['user_id'],
                    'time': current_time, 'text': ai_answer['text'], 'position': 'l'}
 

@@ -4,12 +4,20 @@
 			{% include 'message_template.html' %}
 		{% endfor %}
 	</div>
+	<div id="fileListContainer" style="display: none;">
+		<ul id="fileList"></ul>
+	</div>
+	<div id="progressContainer" style="display:none;">
+		<div id="progressBar" style="width:0%; height: 20px; background-color: green;"></div>
+	</div>
 	<div class="d-flex flex-row align-items-end p-3 border border-1 shadow-sm">
-		<button type="button" class="btn btn-outline-dark">
+		<button type="button" class="btn btn-outline-dark" onclick="document.getElementById('fileInput').click();">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
-			  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+				<path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
 			</svg>
 		</button>
+		<!-- Скрытый элемент input для загрузки файла -->
+		<input type="file" id="fileInput" style="display: none;" multiple/>
 		<textarea id='message-area' class="form-control p-3 mx-3"></textarea>
 		<div class="btn-group" role="group">
 			<button id="start-recognition" type="button" class="btn btn-outline-dark">

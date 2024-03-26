@@ -1,3 +1,4 @@
+import os
 import re
 import sqlite3
 from datetime import datetime
@@ -9,7 +10,8 @@ modules = {'timers': ['таймеры'],
            'metronome': ['метроном'],
            'memory': ['память'],
            'ai_chat': ['расскажи'],
-           'trading_journal': ['торгов', 'журнал']}
+           'trading_journal': ['торгов', 'журнал'],
+           'diary': ['дневник']}
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
@@ -106,13 +108,14 @@ def process_command(command):
     if command is None or modules is None or commands_list is None:
         return None
 
+    command_text = command['text']
     target_module = None
     # Определяем модуль по словарю. Словарь Модуль:[Список слов активации]
     for key, values in modules.items():
         if target_module:
             break
         for module_command in values:
-            if module_command in command:
+            if module_command in command_text:
                 target_module = key
                 break
 
@@ -121,12 +124,12 @@ def process_command(command):
 
     # Если целевой модуль ai передаем всю команду
     if target_module == 'ai_chat':
-        text = gemini_proxy_response(command)
+        text = gemini_proxy_response(command_text)
         ai_message = {'user_id': 3, 'text': text}
         return ai_message
 
     # Получаем результат от модулей
-    result = load_modules({'target_module': target_module, 'text': command})
+    result = load_modules({'target_module': target_module, 'text': command_text, 'files': command.get('files', None)})
     if result is None:
         return None
 
@@ -217,28 +220,58 @@ def load_modules(command):
     global commands_list
     module_name = command.get('target_module', None)
     command_text = command.get('text', None)
+    files_list = command.get('files', None)
+    print(f'load_modules: {files_list}')
     if module_name is None:
         return None
     # Определяем команду по словарю. Словарь Действие:[Список слов активации]
     match module_name:
         case 'trading_journal':
-            print(f'command_text: {command_text}')
-            print(f'module_name: {module_name}')
             command_type = find_command_type(command_text)
             command_info = find_info(command_text)
             command_info['table_name'] = 'TradingJournal'
+            result = ''
             if command_type == 'create':
-                result, error = save_to_base(command_info)
-                if not result:
+                save_result, error = save_to_base(command_info)
+                if not save_result:
                     print(error)
-                    return {'text': error}
-                return {'text': 'Запись добавлена в журнал'}
-            if command_type == 'append':
-                result, error = append_to_base(command_info)
-                if not result:
+                    result += f'Ошибка добавления записи в журнал {error}\n'
+                else:
+                    result += 'Запись добавлена в журнал' + '\n'
+            elif command_type == 'append':
+                save_result, error = append_to_base(command_info)
+                if not save_result:
                     print(error)
-                    return {'text': 'Ошибка записи в журнал'}
-                return {'text': 'Запись добавлена в журнал'}
+                    result += f'Ошибка дополнения записи в журнале {error}\n'
+                else:
+                    result += 'Запись добавлена в журнал' + '\n'
+            if files_list:
+                current_month = datetime.now().strftime('%m')
+                save_path = os.path.join(os.path.dirname(__file__), 'static', 'images', 'TradingJournal', current_month)
+                os.makedirs(save_path, exist_ok=True)
+                current_date = datetime.now().strftime("%Y-%m-%d")
+                i = 0
+                print(f'load_modules: files_list: {files_list}')
+                for file_key in files_list:
+                    file = files_list[file_key]
+                    if file.filename == '':
+                        continue
+                    file_extension = os.path.splitext(file.filename)[1]
+                    save_file_name = f'{current_date}[{i}]{file_extension}'
+                    while os.path.exists(os.path.join(save_path, save_file_name)):
+                        i += 1
+                        save_file_name = f'{current_date}[{i}]{file_extension}'
+
+                    file.save(os.path.join(save_path, save_file_name))
+                    i += 1
+                result += 'Файлы загружены' + '\n'
+            return {'text': result}
+
     return {'text': f'Команда {command_text} не обработана'}
+
     timer_time = parse_time(command)  # парсим время во фразе
     found_numbers = re.findall(r'\d+', command)
+
+
+if __name__ != '__main__':
+    print("start_main")

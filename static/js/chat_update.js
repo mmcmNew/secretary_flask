@@ -4,9 +4,18 @@ function scrollToBottom() {
 }
 
 $('#sendMessage').click(function() {
-    sendMessage();
+    var messageArea = $('#message-area');
+    if ($.trim(messageArea.val()) === '') {
+        messageArea.addClass('focus-ring focus-ring-danger'); // Добавляем классы
+        messageArea.focus();
+    } else {
+        sendMessage();
+    }
 });
 
+$('#message-area').click(function() {
+    $(this).removeClass('focus-ring focus-ring-warning'); // Удаляем классы при фокусе
+});
 
 $('.quick-command').on('click', function() {
     var commandId = $(this).data('command-id');
@@ -21,25 +30,41 @@ function sendMessage(customMessage, message_type) {
     if ($.trim(message) === '') {
         return;
     }
+    $('#start-recognition').attr('disabled', true);
     $('#sendMessage').html('<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> <span class="visually-hidden" role="status">Loading...</span>').attr('disabled', true);
     if (!message_type) {
          message_type = 'request'
+    }
+    var formData = new FormData();
+    formData.append('message', message);
+    formData.append('type', message_type);
+    if (message_type === 'answer') {
+        $.each(selectedFiles, function(i, file) { //собираем файлы
+            formData.append('file' + i, file);
+        });
+        clearFileList();
     }
 
     $.ajax({
         type: 'POST',
         url: '/new-message',
-        contentType: 'application/x-www-form-urlencoded',
-        data: { 'message': message, 'type': message_type },
+        contentType: false, // Необходимо для правильной работы FormData
+        processData: false, // Необходимо для предотвращения преобразования данных в строку
+        data: formData, //отправляем сообщение пользователя на сервер
         success: function(data) {
-            $('#chat').append(data.div);
-            if (data.type === 'request') {
+            $('#chat').append(data.div); //из полученного ответа добавляем div в чат
+            if (data.type === 'request') { //если прошлое сообщение было запросом, то повторно отправляем его что получить ответ секретаря
                 $('#message-area').val(''); // Очищаем только если сообщение взято из поля ввода
-                sendMessage(message, 'answer')
+                sendMessage(message, 'answer') //отправляем с меткой чтоб получить ответ, а не только обработку
             }
-            else {
-                $('#sendMessage').html('Send').attr('disabled', false);
+            if (data.type === 'answer') {
+                var lastMessageText = $('#chat').children().last().find('.chat-message-text').text();
+                var playButton = $('#chat').children().last().find('.play-audio-button');
+                var progressBar = $('#chat').children().last().find('.audio-progress')[0];
+                playTextUsingServerTTS(lastMessageText, playButton, progressBar);
             }
+            $('#start-recognition').attr('disabled', false);
+            $('#sendMessage').html('Send').attr('disabled', false); //после получения обработки разблокируем кнопку
             scrollToBottom();
         }
     });

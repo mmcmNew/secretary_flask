@@ -11,6 +11,14 @@
 		{% if message.image %}
 			<img src="{{ url_for('static', filename='images/' + message.image) }}" alt="Chat Image" class="chat-image">
 		{% endif %}
-		<div class="chat-message-text">{{message.text}}<p class="text-sm-start my-1" style="font-size: 0.7em;">{{message.time}}</p></div>
+		<div class="chat-message-text">{{message.text}}</div><p class="text-sm-start my-1" style="font-size: 0.7em;">{{message.time}}</p>
+		{% if message.position == 'l' %}
+            <button class="btn play-audio-button">
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16">
+				  <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+				</svg>
+			</button>
+            <div class="audio-progress" style="width: 0%; height: 1px; background-color: blue;"></div>
+        {% endif %}
 	</div>
 </div>
