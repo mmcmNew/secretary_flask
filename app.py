@@ -103,9 +103,8 @@ def new_message():
     # для первого запроса формируем вывод в чат
     if message_type == 'request':
         message = {'table_name': 'ChatHistory', 'user_id': 1, 'time': current_time, 'text': text, 'position': 'r'}
-        result, error = save_to_base(message)
-        if not result:
-            print(error)
+        result = save_to_base(message)
+        print(result)
         message['name'] = 'Me'
         message['avatar'] = 'me.png'
     else:
@@ -118,9 +117,8 @@ def new_message():
         message = {'table_name': 'ChatHistory', 'user_id': ai_answer['user_id'],
                    'time': current_time, 'text': ai_answer['text'], 'position': 'l'}
 
-        result, error = save_to_base(message)
-        if not result:
-            print(error)
+        result = save_to_base(message)
+        print(result)
         message['name'] = users[ai_answer['user_id']]['name']
         message['avatar'] = users[ai_answer['user_id']]['avatar']
 
@@ -131,3 +129,4 @@ def new_message():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    # app.run(host='0.0.0.0')

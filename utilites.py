@@ -5,22 +5,23 @@ from datetime import datetime
 
 from modules.geminiVPN import gemini_proxy_response
 
-modules = {'timers': ['таймеры'],
-           'timer': ['таймер', 'напомни'],
-           'metronome': ['метроном'],
-           'memory': ['память'],
-           'ai_chat': ['расскажи'],
-           'trading_journal': ['торгов', 'журнал'],
-           'diary': ['дневник']}
+modules = {'timer': {'words': ['таймер', 'напомни'], 'commands_list': ['start', 'stop', 'edit', 'del'], 'info': ['name']},
+           'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del']},
+           'memory': {'words': ['память']},
+           'ai_chat': {'words': ['расскажи']},
+           'trading_journal': {'words': ['журнал'], 'commands_list': ['create', 'append', 'edit', 'del'],
+                               'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment']},
+           'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
+                     'info': ['bias', 'reason', 'result', 'lessons', 'comment']}}
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
-                 'reload': ['измени'],
                  'create': ['запиши', 'добавь запись'],
                  'append': ['допиши', ],
-                 'edit': ['перезапиши']}
+                 'edit': ['перезапиши'],
+                 'del': ['удали']}
 
-command_information = {'name': ['назван'],
+command_information = {'name': ['назван',],
                        'trading_day': ['сегодня'],
                        'bias': ['настро'],
                        'news': ['новос'],
@@ -28,7 +29,8 @@ command_information = {'name': ['назван'],
                        'model': ['модел'],
                        'reason': ['причин'],
                        'result': ['резул'],
-                       'comment': ['коммент']}
+                       'comment': ['коммент', 'заметка'],
+                       'lessons': ['занима', 'делаю', 'сделал'], }
 
 buttons = ['timer start',
            'timers stop',
@@ -56,26 +58,26 @@ def parse_time(text):
     return result
 
 
-def find_command_type(command):
-    global commands_list
+def find_command_type(module_name, command):
+    global commands_list, modules
     command_type = None
-    for key, values in commands_list.items():
+    for commands_types in modules[module_name]['commands_list']:
         if command_type:
             break
-        for value in values:
+        for value in commands_list[commands_types]:
             if value in command:
-                command_type = key
+                command_type = commands_types
                 break
     return command_type
 
 
-def find_info(text):
+def find_info(module_name, text):
     # Уникальный разделитель, который маловероятно встретить в тексте
     delimiter = "||"
     replacements_made = None
     # Заменяем слова на ключевые слова с разделителем
-    for key, values in command_information.items():
-        for value in values:
+    for info_type in modules[module_name]['info']:
+        for value in command_information[info_type]:
             # Находим позицию первого вхождения ключевого слова
             start = text.find(value)
             if start != -1:
@@ -84,7 +86,7 @@ def find_info(text):
                 if end == -1:
                     end = len(text)  # Если пробел не найден, заменяем до конца текста
                 # Заменяем весь фрагмент ключевым словом и разделителем
-                text = text[:start] + delimiter + key + text[end:]
+                text = text[:start] + delimiter + info_type + text[end:]
                 replacements_made = True
                 break  # Прекращаем поиск после первой замены для данного ключа
 
@@ -104,18 +106,20 @@ def find_info(text):
 
 
 def process_command(command):
-    global modules, commands_list
-    if command is None or modules is None or commands_list is None:
+    global modules
+    if command is None or modules is None:
         return None
 
     command_text = command['text']
     target_module = None
-    # Определяем модуль по словарю. Словарь Модуль:[Список слов активации]
+    command_text_words = command_text.split()[:4] # для поиска модуля проверяем первые 4 слова
+    # Определяем модуль по словарю. Словарь Модуль:{[Список слов активации], [Список команд модуля], [Список информации]}
     for key, values in modules.items():
         if target_module:
             break
-        for module_command in values:
-            if module_command in command_text:
+        for module_command in values['words']:
+            print(module_command)
+            if module_command in command_text_words:
                 target_module = key
                 break
 
@@ -148,11 +152,14 @@ def save_to_base(message):
         columns = []
         values = []
         del message['table_name']
-        if table_name == 'TradingJournal':
+        if table_name == 'trading_journal':
             message['date'] = current_date
             trading_day = message.get('trading_day', current_date)
-            columns = ['trading_day', 'time']
-            values = [trading_day, current_time]
+            message['trading_day'] = trading_day
+            message['time'] = current_time
+        if table_name == 'diary':
+            message['date'] = current_date
+            message['time'] = current_time
             # Собираем названия столбцов и их значения из словаря message
         print(message)
         for key, value in message.items():
@@ -172,9 +179,11 @@ def save_to_base(message):
         # Сохранение изменений
         connection.commit()
         connection.close()
-        return 1, ''
+        result = f'Запись добавлена в {table_name}. '
+        return result
     except Exception as e:
-        return None, f'{e}'
+        result = f'Ошибка добавления записи в {table_name}: {e}. '
+        return result
 
 
 def append_to_base(message):
@@ -211,9 +220,45 @@ def append_to_base(message):
         # Сохранение изменений
         connection.commit()
         connection.close()
-        return 1, ''
+        result = f'Запись дополнена в {table_name}. '
+        return result
     except Exception as e:
-        return None, f'Append to base: {e}'
+        result = f'Ошибка при редактировании записи в {table_name}: {e}. '
+        return result
+
+
+def save_files(files):
+    try:
+        files_list = files.get('files_list', None)
+        dir_name = files.get('dir_name', None)
+        print(f'save_files: files_list: {files_list}, dir_name: {dir_name}')
+        if files_list is None or dir_name is None:
+            return 'Не получены файлы для загрузки'
+        print(f'save_files: files_list: {files_list}, dir_name: {dir_name}')
+        if files_list:
+            current_month = datetime.now().strftime('%m')
+            save_path = os.path.join(os.path.dirname(__file__), 'static', 'images', dir_name, current_month)
+            os.makedirs(save_path, exist_ok=True)
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            i = 0
+            print(f'load_modules: files_list: {files_list}')
+            for file_key in files_list:
+                file = files_list[file_key]
+                if file.filename == '':
+                    continue
+                file_extension = os.path.splitext(file.filename)[1]
+                save_file_name = f'{current_date}[{i}]{file_extension}'
+                while os.path.exists(os.path.join(save_path, save_file_name)):
+                    i += 1
+                    save_file_name = f'{current_date}[{i}]{file_extension}'
+
+                file.save(os.path.join(save_path, save_file_name))
+                i += 1
+        result = 'Файлы загружены. '
+        return result
+    except Exception as e:
+        result = f'Файлы не загружены: {e}. '
+        return result
 
 
 def load_modules(command):
@@ -221,53 +266,32 @@ def load_modules(command):
     module_name = command.get('target_module', None)
     command_text = command.get('text', None)
     files_list = command.get('files', None)
-    print(f'load_modules: {files_list}')
     if module_name is None:
         return None
-    # Определяем команду по словарю. Словарь Действие:[Список слов активации]
-    match module_name:
-        case 'trading_journal':
-            command_type = find_command_type(command_text)
-            command_info = find_info(command_text)
-            command_info['table_name'] = 'TradingJournal'
-            result = ''
-            if command_type == 'create':
-                save_result, error = save_to_base(command_info)
-                if not save_result:
-                    print(error)
-                    result += f'Ошибка добавления записи в журнал {error}\n'
-                else:
-                    result += 'Запись добавлена в журнал' + '\n'
-            elif command_type == 'append':
-                save_result, error = append_to_base(command_info)
-                if not save_result:
-                    print(error)
-                    result += f'Ошибка дополнения записи в журнале {error}\n'
-                else:
-                    result += 'Запись добавлена в журнал' + '\n'
+    # Получаем тип команды
+    result = ''
+    command_type = find_command_type(module_name, command_text)
+    match command_type:
+        case 'create':
+            command_info = find_info(module_name, command_text)
+            command_info['table_name'] = module_name
+            save_result = save_to_base(command_info)
+            result = save_result
             if files_list:
-                current_month = datetime.now().strftime('%m')
-                save_path = os.path.join(os.path.dirname(__file__), 'static', 'images', 'TradingJournal', current_month)
-                os.makedirs(save_path, exist_ok=True)
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                i = 0
-                print(f'load_modules: files_list: {files_list}')
-                for file_key in files_list:
-                    file = files_list[file_key]
-                    if file.filename == '':
-                        continue
-                    file_extension = os.path.splitext(file.filename)[1]
-                    save_file_name = f'{current_date}[{i}]{file_extension}'
-                    while os.path.exists(os.path.join(save_path, save_file_name)):
-                        i += 1
-                        save_file_name = f'{current_date}[{i}]{file_extension}'
+                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
+                result += f'{save_result}'
 
-                    file.save(os.path.join(save_path, save_file_name))
-                    i += 1
-                result += 'Файлы загружены' + '\n'
-            return {'text': result}
-
-    return {'text': f'Команда {command_text} не обработана'}
+        case 'append':
+            command_info = find_info(module_name, command_text)
+            command_info['table_name'] = module_name
+            save_result = append_to_base(command_info)
+            result = save_result
+            if files_list:
+                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
+                result += f'{save_result}'
+        case _:
+            return {'text': f'Команда {command_text} не обработана'}
+    return {'text': result}
 
     timer_time = parse_time(command)  # парсим время во фразе
     found_numbers = re.findall(r'\d+', command)
