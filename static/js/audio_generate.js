@@ -57,3 +57,19 @@ $(document).on('click', '.play-audio-button', function() {
     var progressBar = $(this).next('.audio-progress')[0];
     playTextUsingServerTTS(messageText, $(this), progressBar);
 });
+
+function generateAudioURLFromText(text) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            type: 'POST',
+            url: '/generate-tts',
+            data: { text: text },
+            success: function(response) {
+                resolve(response.audioUrl);
+            },
+            error: function(error) {
+                reject(error);
+            }
+        });
+    });
+}

@@ -38,7 +38,7 @@ function sendMessage(customMessage, message_type) {
     var formData = new FormData();
     formData.append('message', message);
     formData.append('type', message_type);
-    if (message_type === 'answer') {
+    if (message_type !== 'request') {
         $.each(selectedFiles, function(i, file) { //собираем файлы
             formData.append('file' + i, file);
         });
@@ -57,12 +57,19 @@ function sendMessage(customMessage, message_type) {
                 $('#message-area').val(''); // Очищаем только если сообщение взято из поля ввода
                 sendMessage(message, 'answer') //отправляем с меткой чтоб получить ответ, а не только обработку
             }
-            if (data.type === 'answer') {
+            if (data.type !== 'request') {
                 var lastMessageText = $('#chat').children().last().find('.chat-message-text').text();
                 var playButton = $('#chat').children().last().find('.play-audio-button');
                 var progressBar = $('#chat').children().last().find('.audio-progress')[0];
                 playTextUsingServerTTS(lastMessageText, playButton, progressBar);
             }
+            if (data.type === 'timer') {
+                $('#toolsPanel').attr('hidden', false);
+                $('#toolsPanel').append(data.timer_div.div);
+                let timerId = data.timer_div.id;
+                $('#' + timerId + '_start').click();
+            }
+
             $('#start-recognition').attr('disabled', false);
             $('#sendMessage').html('Send').attr('disabled', false); //после получения обработки разблокируем кнопку
             scrollToBottom();

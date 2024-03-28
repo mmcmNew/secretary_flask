@@ -11,3 +11,4 @@ db/create_db.sql
 /instance
 /modules
 *.zip
+/static/temp

@@ -3,16 +3,17 @@ import re
 import sqlite3
 from datetime import datetime
 
-from modules.geminiVPN import gemini_proxy_response
-
-modules = {'timer': {'words': ['таймер', 'напомни'], 'commands_list': ['start', 'stop', 'edit', 'del'], 'info': ['name']},
-           'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del']},
-           'memory': {'words': ['память']},
-           'ai_chat': {'words': ['расскажи']},
-           'trading_journal': {'words': ['журнал'], 'commands_list': ['create', 'append', 'edit', 'del'],
-                               'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment']},
-           'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
-                     'info': ['reason', 'result', 'lessons', 'comment']}}
+modules = {
+    'timer': {'words': ['таймер', 'напомни'], 'commands_list': ['start', 'stop', 'edit', 'del'], 'info': ['name']},
+    'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del']},
+    'memory': {'words': ['память']},
+    'ai_chat': {'words': ['расскажи']},
+    'trading_journal': {'words': ['трейд', 'торгов'], 'commands_list': ['create', 'append', 'edit', 'del'],
+                        'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment']},
+    'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
+              'info': ['reason', 'result', 'lessons', 'comment']},
+    'project_journal': {'words': ['разработ'], 'commands_list': ['create', 'append', 'edit', 'del'],
+                        'info': ['project_name', 'step', 'comment']}}
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
@@ -21,7 +22,7 @@ commands_list = {'start': ['запусти', 'поставь', 'установи
                  'edit': ['перезапиши'],
                  'del': ['удали']}
 
-command_information = {'name': ['назван',],
+command_information = {'name': ['назван', 'назови', 'напомни'],
                        'trading_day': ['сегодня'],
                        'bias': ['настро'],
                        'news': ['новос'],
@@ -30,7 +31,9 @@ command_information = {'name': ['назван',],
                        'reason': ['причин'],
                        'result': ['резул'],
                        'comment': ['коммент'],
-                       'lessons': ['урок'], }
+                       'lessons': ['урок'],
+                       'project_name': ['проект'],
+                       'step': ['этап']}
 
 buttons = ['timer start',
            'timers stop',
@@ -42,8 +45,7 @@ buttons = ['timer start',
 def parse_time(text):
     print(text)
     if 'полчаса' in text:
-        result = '00:30:00'
-        return result
+        return ['00', '30', '00']
 
     time_units = {"час": 0, "минут": 0, "секунд": 0}
     numbers_in_text = [int(num) for num in re.findall(r'\d+', text)]
@@ -54,18 +56,19 @@ def parse_time(text):
                 time_units[unit] = numbers_in_text.pop(0)
             except (ValueError, IndexError):
                 continue
-    result = f'{time_units["час"]:02}:{time_units["минут"]:02}:{time_units["секунд"]:02}'
+    result = [time_units["час"], time_units["минут"], time_units["секунд"]]
     return result
 
 
 def find_command_type(module_name, command):
     global commands_list, modules
     command_type = None
+    print(f'find_command_type: command: {command}')
     for commands_types in modules[module_name]['commands_list']:
         if command_type:
             break
         for value in commands_list[commands_types]:
-            if value in command:
+            if value in command.lower():
                 command_type = commands_types
                 break
     return command_type
@@ -75,11 +78,12 @@ def find_info(module_name, text):
     # Уникальный разделитель, который маловероятно встретить в тексте
     delimiter = "||"
     replacements_made = None
+    print(f'find_info: text: {text}')
     # Заменяем слова на ключевые слова с разделителем
     for info_type in modules[module_name]['info']:
         for value in command_information[info_type]:
             # Находим позицию первого вхождения ключевого слова
-            start = text.find(value)
+            start = text.lower().find(value)
             if start != -1:
                 # Находим позицию следующего пробела после ключевого слова
                 end = text.find(' ', start)
@@ -97,49 +101,70 @@ def find_info(module_name, text):
 
     # Собираем словарь, где ключ - это ключевое слово, а значение - текст до следующего ключа
     result = {}
-    for i, segment in enumerate(split_text[1:], start=1):  # Пропускаем первый элемент, так как он перед первым ключевым словом
+    for i, segment in enumerate(split_text[1:],
+                                start=1):  # Пропускаем первый элемент, так как он перед первым ключевым словом
         key = segment.split()[0]  # Первое слово - ключ
         value = ' '.join(segment.split()[1:])  # Остальная часть - значение
         result[key] = value
-
+    print(f'find_info: {result}')
     return result
 
 
-def process_command(command):
+def find_target_module(command):
     global modules
     if command is None or modules is None:
         return None
 
-    command_text = command['text']
     target_module = None
-    command_text_words = command_text.split()[:4] # для поиска модуля проверяем первые 4 слова
     # Определяем модуль по словарю. Словарь Модуль:{[Список слов активации], [Список команд модуля], [Список информации]}
+    earliest_occurrence = len(command) + 1
     for key, values in modules.items():
-        if target_module:
-            break
         for module_command in values['words']:
-            print(module_command)
-            if module_command in command_text_words:
+            position = command.lower().find(module_command)
+            if position != -1 and position < earliest_occurrence:
+                earliest_occurrence = position
                 target_module = key
-                break
+    # target_module установлен в первый модуль, найденный в command_text
 
     if target_module is None:
         return None
 
-    # Если целевой модуль ai передаем всю команду
-    if target_module == 'ai_chat':
-        text = gemini_proxy_response(command_text)
-        ai_message = {'user_id': 3, 'text': text}
-        return ai_message
+    return target_module
 
-    # Получаем результат от модулей
-    result = load_modules({'target_module': target_module, 'text': command_text, 'files': command.get('files', None)})
-    if result is None:
+
+def save_to_base_modules(command):
+    global commands_list
+    module_name = command.get('target_module', None)
+    command_text = command.get('text', None)
+    files_list = command.get('files', None)
+    if module_name is None:
         return None
+    # Получаем тип команды
+    result = ''
+    command_type = find_command_type(module_name, command_text)
+    print(f'save_to_base: command_type: {command_type}')
+    match command_type:
+        case 'create':
+            command_info = find_info(module_name, command_text)
+            command_info['table_name'] = module_name
+            save_result = save_to_base(command_info)
+            result = save_result
+            if files_list:
+                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
+                result += f'{save_result}'
 
-    ai_message = {'user_id': 2, 'text': result['text']}
+        case 'append':
+            command_info = find_info(module_name, command_text)
+            command_info['table_name'] = module_name
+            save_result = append_to_base(command_info)
+            result = save_result
+            if files_list:
+                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
+                result += f'{save_result}'
+        case _:
+            return {'text': f'Команда {command_text} не обработана'}
 
-    return ai_message
+    return {'text': result}
 
 
 def save_to_base(message):
@@ -151,13 +176,14 @@ def save_to_base(message):
         table_name = message.get('table_name', '')
         columns = []
         values = []
+        print(f'save_to_base: message: {message}')
         del message['table_name']
         if table_name == 'trading_journal':
             message['date'] = current_date
             trading_day = message.get('trading_day', current_date)
             message['trading_day'] = trading_day
             message['time'] = current_time
-        if table_name == 'diary':
+        if table_name == 'diary' or table_name == 'project_journal':
             message['date'] = current_date
             message['time'] = current_time
             # Собираем названия столбцов и их значения из словаря message
@@ -259,42 +285,6 @@ def save_files(files):
     except Exception as e:
         result = f'Файлы не загружены: {e}. '
         return result
-
-
-def load_modules(command):
-    global commands_list
-    module_name = command.get('target_module', None)
-    command_text = command.get('text', None)
-    files_list = command.get('files', None)
-    if module_name is None:
-        return None
-    # Получаем тип команды
-    result = ''
-    command_type = find_command_type(module_name, command_text)
-    match command_type:
-        case 'create':
-            command_info = find_info(module_name, command_text)
-            command_info['table_name'] = module_name
-            save_result = save_to_base(command_info)
-            result = save_result
-            if files_list:
-                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
-                result += f'{save_result}'
-
-        case 'append':
-            command_info = find_info(module_name, command_text)
-            command_info['table_name'] = module_name
-            save_result = append_to_base(command_info)
-            result = save_result
-            if files_list:
-                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
-                result += f'{save_result}'
-        case _:
-            return {'text': f'Команда {command_text} не обработана'}
-    return {'text': result}
-
-    timer_time = parse_time(command)  # парсим время во фразе
-    found_numbers = re.findall(r'\d+', command)
 
 
 if __name__ != '__main__':

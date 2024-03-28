@@ -1,0 +1,17 @@
+<div class="accordion" id="{{ action_module.id }}_action">
+    {% for action in action_module.actions %}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ action_module.id }}-{{ loop.index }}" aria-expanded="true"
+                        aria-controls="collapse{{ action_module.id }}-{{ loop.index }}">Этап {{ loop.index }}: {{ action.name }}
+                </button>
+            </h2>
+            <div id="collapse{{ action_module.id }}-{{ loop.index }}" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                    <!-- Содержимое для каждого аккордеона -->
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>

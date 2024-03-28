@@ -3,9 +3,12 @@ import os
 from datetime import datetime
 
 import sqlite3
+import random
+
 from flask import Flask, render_template, jsonify, request
 
-from utilites import process_command, save_to_base
+from modules.geminiVPN import gemini_proxy_response
+from utilites import find_target_module, save_to_base, save_to_base_modules, find_info, parse_time
 from text_to_edge_tts import tts
 
 app = Flask(__name__)
@@ -71,13 +74,8 @@ def home():
     for row in cursor.fetchall():
         if row[0] is None:
             continue
-        message_data = {'id': row[0],
-                        'user_id': row[1],
-                        'date': row[2],
-                        'time': row[3],
-                        'text': row[4],
-                        'image': row[5],
-                        'position': row[6]}
+        message_data = {'id': row[0], 'user_id': row[1], 'date': row[2], 'time': row[3], 'text': row[4],
+                        'image': row[5], 'position': row[6]}
 
         message_data['name'] = users[message_data['user_id']]['name']
         message_data['avatar'] = users[message_data['user_id']]['avatar']
@@ -98,8 +96,7 @@ def new_message():
     current_time = datetime.now().strftime("%H:%M")
     text = request.form.get('message')
     message_type = request.form.get('type')
-    print(f'message_type: "{message_type}"')
-    print(f'new_message: Список файлов: {request.files}')
+    tool_panel_div = None
     # для первого запроса формируем вывод в чат
     if message_type == 'request':
         message = {'table_name': 'ChatHistory', 'user_id': 1, 'time': current_time, 'text': text, 'position': 'r'}
@@ -110,10 +107,30 @@ def new_message():
     else:
         # при повторном запросе отправляем его секретарю
         users = get_users()
-        command = {'text': text}
-        if request.files:
-            command['files'] = request.files
-        ai_answer = process_command(command) or {'user_id': 2, 'text': 'Уточните запрос'}
+        target_module = find_target_module(text)
+        print(f'new_message: target_module: {target_module}')
+        match target_module:
+            case 'timer':
+                div_time = datetime.now().strftime("%Y%m%d%H%M%S")
+                random_id = random.randint(1000, 9999)
+                timer_info = {'time': parse_time(text), 'info': find_info('timer', text),
+                              'id': f'{div_time}{random_id}'}
+                ai_answer = {'user_id': 2, 'text': f'Запускаю таймер '}
+                timer_div = render_template('timer.html', timer=timer_info)
+                message_type = 'timer'
+            case 'trading_journal' | 'diary' | 'project_journal':
+                command = {'target_module': target_module, 'text': text}
+                if request.files:
+                    command['files'] = request.files
+                result = save_to_base_modules(command) # обработчик для модулей которые сохраняют записи в базу
+                ai_answer = {'user_id': 2, 'text': result['text']}
+            case 'ai_chat':
+                # Если целевой модуль ai передаем всю команду
+                gemini_answer = gemini_proxy_response(text)
+                ai_answer = {'user_id': 3, 'text': gemini_answer}
+            case _:
+                ai_answer = {'user_id': 2, 'text': 'Уточните запрос'}
+
         message = {'table_name': 'ChatHistory', 'user_id': ai_answer['user_id'],
                    'time': current_time, 'text': ai_answer['text'], 'position': 'l'}
 
@@ -123,7 +140,9 @@ def new_message():
         message['avatar'] = users[ai_answer['user_id']]['avatar']
 
     chat_message = render_template('message_template.html', message=message)
-
+    if message_type == 'timer':
+        return jsonify({'div': chat_message, 'timer_div': {'div': timer_div, 'id': timer_info['id']},
+                        'type': message_type})
     return jsonify({'div': chat_message, 'type': message_type})
 
 

@@ -1,13 +1,14 @@
-<div id="timer_container" class=" rounded border border-mb-1">
-    <input type="text" id="timerName" class="form-control form-control-sm" value="Таймер">
+<div id="{{timer.id}}_container" class="rounded border border-mb-1">
+    <input type="text" id="{{timer.id}}_name" class="form-control form-control-sm" value="{{timer.info['name']}}">
     <div class="input-group mb-1">
-        <input type="text" id="timerHours" class="form-control text-center" placeholder="ЧЧ" value="{{timer.hours}}">
-        <input type="text" id="timerMinutes" class="form-control text-center" placeholder="{{timer.minutes}}" >
-        <input type="text" id="timerSeconds" class="form-control text-center" placeholder="{{timer.seconds}}" >
+        <input type="text" id="{{timer.id}}_hours" class="form-control text-center" value="{{timer.time[0]}}">
+        <input type="text" id="{{timer.id}}_minutes" class="form-control text-center" value="{{timer.time[1]}}">
+        <input type="text" id="{{timer.id}}_seconds" class="form-control text-center" value="{{timer.time[2]}}">
     </div>
+    <button id="{{timer.id}}_close" class="btn btn-outline-dark btn-sm closeTimer me-5"><i class="bi bi-x-circle"></i></button>
     <div class="btn-group btn-group-sm" role="group">
-        <button id="startTimer" class="btn btn-outline-dark"><i class="bi bi-play-fill"></i></button>
-        <button id="stop" class="btn btn-outline-dark"><i class="bi bi-stop-fill"></i></button>
-        <button id="reset" class="btn btn-outline-dark"><i class="bi bi-arrow-counterclockwise"></i></button>
+        <button id="{{timer.id}}_start" class="btn btn-outline-dark startTimer"><i class="bi bi-play-fill"></i></button>
+        <button id="{{timer.id}}_stop" class="btn btn-outline-dark stopTimer"><i class="bi bi-stop-fill"></i></button>
+        <button id="{{timer.id}}_reset" class="btn btn-outline-dark resetTimer"><i class="bi bi-arrow-counterclockwise"></i></button>
     </div>
 </div>
