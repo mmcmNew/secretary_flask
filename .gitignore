@@ -1,0 +1,13 @@
+
+/static/images
+/.idea
+/.idea
+*.xml
+/__pycache__
+config.txt
+database.db
+db/ToDoBase.db
+db/create_db.sql
+/instance
+/modules
+*.zip

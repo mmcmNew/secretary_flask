@@ -12,12 +12,12 @@ modules = {'timer': {'words': ['таймер', 'напомни'], 'commands_list
            'trading_journal': {'words': ['журнал'], 'commands_list': ['create', 'append', 'edit', 'del'],
                                'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment']},
            'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
-                     'info': ['bias', 'reason', 'result', 'lessons', 'comment']}}
+                     'info': ['reason', 'result', 'lessons', 'comment']}}
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
                  'create': ['запиши', 'добавь запись'],
-                 'append': ['допиши', ],
+                 'append': ['допиши', 'до пиши', 'да пиши'],
                  'edit': ['перезапиши'],
                  'del': ['удали']}
 
@@ -29,8 +29,8 @@ command_information = {'name': ['назван',],
                        'model': ['модел'],
                        'reason': ['причин'],
                        'result': ['резул'],
-                       'comment': ['коммент', 'заметка'],
-                       'lessons': ['занима', 'делаю', 'сделал'], }
+                       'comment': ['коммент'],
+                       'lessons': ['урок'], }
 
 buttons = ['timer start',
            'timers stop',
