@@ -1,15 +1,42 @@
 <div class="accordion" id="{{ action_module.id }}_action">
-    {% for action in action_module.actions %}
+    <h2>{{ action_module.name }}</h2>
+    {% for step in action_module.steps %}
         <div class="accordion-item">
             <h2 class="accordion-header">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapse{{ action_module.id }}-{{ loop.index }}" aria-expanded="true"
-                        aria-controls="collapse{{ action_module.id }}-{{ loop.index }}">Этап {{ loop.index }}: {{ action.name }}
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#{{ step.id }}_collapse" aria-expanded="false"
+                        aria-controls="{{ step.id }}_collapse">Этап {{ loop.index }}: {{ step.name }}
                 </button>
             </h2>
-            <div id="collapse{{ action_module.id }}-{{ loop.index }}" class="accordion-collapse collapse show">
-                <div class="accordion-body">
-                    <!-- Содержимое для каждого аккордеона -->
+            <div id="{{ step.id }}_collapse" class="accordion-collapse collapse">
+                <div class="accordion-body my-2">
+                    {% for action in step.actions %}
+                        {% if action.type == 'timer' %}
+                            {% with timer=action %}
+                                {% include 'timer.html' %}
+                            {% endwith %}
+                        {% endif %}
+                        {% if action.type == 'metronome' %}
+                            {% with metronome=action %}
+                                {% include 'metronome.html' %}
+                            {% endwith %}
+                        {% endif %}
+                        {% if action.type == 'audio' %}
+                            {% with audio=action %}
+                                {% include 'audio.html' %}
+                            {% endwith %}
+                        {% endif %}
+                        {% if action.type == 'text' %}
+                            {% with text=action %}
+                                {% include 'text.html' %}
+                            {% endwith %}
+                        {% endif %}
+                        {% if action.type == 'carousel' %}
+                            {% with carousel=action %}
+                                {% include 'carousel.html' %}
+                            {% endwith %}
+                        {% endif %}
+                    {% endfor %}
                 </div>
             </div>
         </div>

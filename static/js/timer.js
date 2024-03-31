@@ -21,7 +21,8 @@ $(document).ready(function() {
 });
 
 function startTimer(timerId) {
-    let timerContainer = $("#" + timerId + "_container");
+    // console.log(timerId)
+    let timerContainer = $("#" + timerId + "_timerContainer");
     if (!timerContainer.data('isRunning')) {
         let timeRemaining = getTimeRemaining(timerId);
         if (timeRemaining === 0) {
@@ -35,7 +36,7 @@ function startTimer(timerId) {
 }
 
 function stopTimer(timerId) {
-    let timerContainer = $("#" + timerId + "_container");
+    let timerContainer = $("#" + timerId + "_timerContainer");
     if (timerContainer.data('isRunning')) {
         clearInterval(timerContainer.data('timer'));
         timerContainer.data('isRunning', false);
@@ -43,14 +44,14 @@ function stopTimer(timerId) {
 }
 
 function resetTimer(timerId) {
-    let timerContainer = $("#" + timerId + "_container");
+    let timerContainer = $("#" + timerId + "_timerContainer");
     clearInterval(timerContainer.data('timer'));
     resetTimeInputs(timerId);
     timerContainer.data('isRunning', false);
 }
 
 function updateTimer(timerId) {
-    let timerContainer = $("#" + timerId + "_container");
+    let timerContainer = $("#" + timerId + "_timerContainer");
     let timeRemaining = timerContainer.data('timeRemaining') - 1000;
     timerContainer.data('timeRemaining', timeRemaining);
     resetTimeInputs(timerId)
@@ -71,9 +72,9 @@ function getTimeRemaining(timerId) {
 }
 
 function resetTimeInputs(timerId) {
-    $("#" + timerId + "_hours").val('00');
-    $("#" + timerId + "_minutes").val('00');
-    $("#" + timerId + "_seconds").val('00');
+    $("#" + timerId + "_hours").val('');
+    $("#" + timerId + "_minutes").val('');
+    $("#" + timerId + "_seconds").val('');
 }
 
 function displayTime(timerId, timeRemaining) {
@@ -91,7 +92,7 @@ function formatTime(time) {
 }
 
 function closeTimer(timerId) {
-    let timerContainer = $("#" + timerId + "_container");
+    let timerContainer = $("#" + timerId + "_timerContainer");
     if (timerContainer.data('isRunning')) {
         clearInterval(timerContainer.data('timer'));
     }
@@ -101,16 +102,29 @@ function closeTimer(timerId) {
 }
 
 function playTimerEndSoundAndText(timerId) {
+    let timerContainer = $("#" + timerId + "_timerContainer");
     let timerEndSound = new Audio('/static/audio/timer-sound.mp3');
+    let fullTimerId = timerId //+ '_timerContainer'
     timerEndSound.play();
     timerEndSound.onended = function() {
-        let text = $("#" + timerId + "_name").val();
-        if (text.trim() === '') return
-        generateAudioURLFromText(text).then(audioUrl => {
-            let audio = new Audio(audioUrl);
-            audio.play();
-        }).catch(error => {
-            console.error("Error generating audio:", error);
-        });
+        let text = $("#" + timerId + "_input").val();
+        if (text.trim() !== '') {
+            generateAudioURLFromText(text).then(audioUrl => {
+                let audio = new Audio(audioUrl);
+                audio.play();
+                audio.onended = function() {
+                    // Теперь здесь вызываем trigger для 'timerStopped'
+                    // console.log(timerContainer)
+                    timerContainer.trigger('timerStopped', [fullTimerId]);
+                };
+            }).catch(error => {
+                console.error("Error generating audio:", error);
+                // Не забудьте вызвать trigger даже в случае ошибки
+                timerContainer.trigger('timerStopped', [fullTimerId]);
+            });
+        } else {
+            // Если текста нет, сразу вызываем trigger для 'timerStopped'
+            timerContainer.trigger('timerStopped', [fullTimerId]);
+        }
     };
 }

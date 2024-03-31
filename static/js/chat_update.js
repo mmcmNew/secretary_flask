@@ -23,7 +23,7 @@ $('.quick-command').on('click', function() {
 });
 
 
-function sendMessage(customMessage, message_type) {
+async function sendMessage(customMessage, message_type) {
     // в начале определяем это сообщение по нажатию кнопки или запрос нет
     // если нет то значит нужно получить ответ от обработчика команд
     var message = customMessage || $('#message-area').val();
@@ -51,7 +51,7 @@ function sendMessage(customMessage, message_type) {
         contentType: false, // Необходимо для правильной работы FormData
         processData: false, // Необходимо для предотвращения преобразования данных в строку
         data: formData, //отправляем сообщение пользователя на сервер
-        success: function(data) {
+        success: async function(data) {
             $('#chat').append(data.div); //из полученного ответа добавляем div в чат
             if (data.type === 'request') { //если прошлое сообщение было запросом, то повторно отправляем его что получить ответ секретаря
                 $('#message-area').val(''); // Очищаем только если сообщение взято из поля ввода
@@ -61,13 +61,27 @@ function sendMessage(customMessage, message_type) {
                 var lastMessageText = $('#chat').children().last().find('.chat-message-text').text();
                 var playButton = $('#chat').children().last().find('.play-audio-button');
                 var progressBar = $('#chat').children().last().find('.audio-progress')[0];
-                playTextUsingServerTTS(lastMessageText, playButton, progressBar);
+                await playTextUsingServerTTS(lastMessageText, playButton, progressBar);
             }
             if (data.type === 'timer') {
                 $('#toolsPanel').attr('hidden', false);
                 $('#toolsPanel').append(data.timer_div.div);
                 let timerId = data.timer_div.id;
                 $('#' + timerId + '_start').click();
+            }
+
+            if (data.type === 'metronome') {
+                $('#toolsPanel').attr('hidden', false);
+                $('#toolsPanel').append(data.metronome_div.div);
+                let metronomeId = data.metronome_div.id;
+                $('#' + metronomeId + '_start_metronome').click();
+            }
+
+            if (data.type === 'action_module') {
+                $('#toolsPanel').attr('hidden', false);
+                $('#toolsPanel').append(data.action_module_div.div);
+                let action_moduleId = data.action_module_div.id;
+                processAccordion(action_moduleId);
             }
 
             $('#start-recognition').attr('disabled', false);

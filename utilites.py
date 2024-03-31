@@ -5,7 +5,7 @@ from datetime import datetime
 
 modules = {
     'timer': {'words': ['таймер', 'напомни'], 'commands_list': ['start', 'stop', 'edit', 'del'], 'info': ['name']},
-    'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del']},
+    'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del'], 'info': ['name']},
     'memory': {'words': ['память']},
     'ai_chat': {'words': ['расскажи']},
     'trading_journal': {'words': ['трейд', 'торгов'], 'commands_list': ['create', 'append', 'edit', 'del'],
@@ -13,7 +13,9 @@ modules = {
     'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
               'info': ['reason', 'result', 'lessons', 'comment']},
     'project_journal': {'words': ['разработ'], 'commands_list': ['create', 'append', 'edit', 'del'],
-                        'info': ['project_name', 'step', 'comment']}}
+                        'info': ['project_name', 'step', 'comment']},
+    'productivity': {'words': ['фокусир'], 'commands_list': ['start', 'stop'],
+                     'actions': []}}
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
@@ -94,13 +96,18 @@ def find_info(module_name, text):
                 replacements_made = True
                 break  # Прекращаем поиск после первой замены для данного ключа
 
+    result = {}
+    if module_name == 'metronome':
+        matches = re.findall(r'\d+', text)
+        bpm = int(matches[0]) if matches else 120
+        result = {'bpm': f'{bpm}'}
+        print(result)
     if not replacements_made:
-        return {}
+        return result
     # Разделяем текст по разделителю
     split_text = text.split(delimiter)
 
     # Собираем словарь, где ключ - это ключевое слово, а значение - текст до следующего ключа
-    result = {}
     for i, segment in enumerate(split_text[1:],
                                 start=1):  # Пропускаем первый элемент, так как он перед первым ключевым словом
         key = segment.split()[0]  # Первое слово - ключ

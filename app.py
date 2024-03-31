@@ -1,5 +1,6 @@
 import glob
 import os
+import json
 from datetime import datetime
 
 import sqlite3
@@ -118,12 +119,28 @@ def new_message():
                 ai_answer = {'user_id': 2, 'text': f'Запускаю таймер '}
                 timer_div = render_template('timer.html', timer=timer_info)
                 message_type = 'timer'
+            case 'metronome':
+                div_time = datetime.now().strftime("%Y%m%d%H%M%S")
+                random_id = random.randint(1000, 9999)
+                metronome_info = {'info': find_info('metronome', text),
+                                  'id': f'{div_time}{random_id}'}
+                print(f'new_message: metronome_info: {metronome_info}')
+                ai_answer = {'user_id': 2, 'text': f'Запускаю метроном. bpm {metronome_info['info']['bpm']} '}
+                metronome_div = render_template('metronome.html', metronome=metronome_info)
+                message_type = 'metronome'
             case 'trading_journal' | 'diary' | 'project_journal':
                 command = {'target_module': target_module, 'text': text}
                 if request.files:
                     command['files'] = request.files
                 result = save_to_base_modules(command) # обработчик для модулей которые сохраняют записи в базу
                 ai_answer = {'user_id': 2, 'text': result['text']}
+            case 'productivity':
+                action_module = action_module_processing(target_module)
+                if action_module:
+                    message_type = 'action_module'
+                    ai_answer = {'user_id': 2, 'text': f'Запускаю модуль {target_module}'}
+                else:
+                    ai_answer = {'user_id': 2, 'text': 'Проблемы при запуске модуля'}
             case 'ai_chat':
                 # Если целевой модуль ai передаем всю команду
                 gemini_answer = gemini_proxy_response(text)
@@ -143,7 +160,40 @@ def new_message():
     if message_type == 'timer':
         return jsonify({'div': chat_message, 'timer_div': {'div': timer_div, 'id': timer_info['id']},
                         'type': message_type})
+    if message_type == 'metronome':
+        return jsonify({'div': chat_message, 'metronome_div': {'div': metronome_div, 'id': metronome_info['id']},
+                        'type': message_type})
+    if message_type == 'action_module':
+        return jsonify({'div': chat_message, 'action_module_div': {'div': action_module['div'], 'id': action_module['id']},
+                        'type': message_type})
     return jsonify({'div': chat_message, 'type': message_type})
+
+
+def action_module_processing(module_name):
+    module_path = os.path.join('modules', f'{module_name}.json')
+    print(f'action_module_processing: module_path: {module_path}')
+    try:
+        with open(module_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+    except Exception as e:
+        print(f'action_module_processing: {e}')
+        return None
+
+    print(f'action_module_processing: data: {data}')
+
+    div_time = datetime.now().strftime("%Y%m%d%H%M%S")
+    random_id = random.randint(1000, 9999)
+    action_module_id = f'{div_time}{random_id}'
+    for step in data['steps']:
+        for action in step['actions']:
+            random_id = random.randint(1000, 9999)
+            action['id'] = f'{action_module_id}-{random_id}'
+        random_id = random.randint(1000, 9999)
+        step['id'] = f'{action_module_id}-{random_id}'
+    action_module = {'id': action_module_id, 'name': data['name'], 'steps': data['steps']}
+    action_module_div = render_template('action_module.html', action_module=action_module)
+
+    return {'id': action_module_id, 'div': action_module_div}
 
 
 if __name__ == '__main__':
