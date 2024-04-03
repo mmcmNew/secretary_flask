@@ -4,18 +4,21 @@ import sqlite3
 from datetime import datetime
 
 modules = {
-    'timer': {'words': ['таймер', 'напомни'], 'commands_list': ['start', 'stop', 'edit', 'del'], 'info': ['name']},
-    'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del'], 'info': ['name']},
-    'memory': {'words': ['память']},
+    'timer': {'words': ['таймер', 'напомни'], 'commands_list': ['start', 'stop', 'edit', 'del'],
+              'info': ['name', 'time'], 'type': 'component'},
+    'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del'],
+                  'info': ['name', 'bpm', 'count'], 'type': 'component'},
+    'memory': {'words': ['памят'], 'info': ['name', 'interval', 'count'], 'type': 'action_module'},
     'ai_chat': {'words': ['расскажи']},
     'trading_journal': {'words': ['трейд', 'торгов'], 'commands_list': ['create', 'append', 'edit', 'del'],
-                        'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment']},
+                        'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment'],
+                        'type': 'journal'},
     'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
-              'info': ['reason', 'result', 'lessons', 'comment']},
+              'info': ['reason', 'result', 'lessons', 'comment'], 'type': 'journal'},
     'project_journal': {'words': ['разработ'], 'commands_list': ['create', 'append', 'edit', 'del'],
-                        'info': ['project_name', 'step', 'comment']},
-    'productivity': {'words': ['фокусир'], 'commands_list': ['start', 'stop'],
-                     'actions': []}}
+                        'info': ['project_name', 'step', 'comment'], 'type': 'journal'},
+    'productivity': {'words': ['фокусир'], 'commands_list': ['start', 'stop'], 'type': 'action_module'},
+    'demo': {'words': ['демонстрац'], 'commands_list': ['start', 'stop'], 'type': 'action_module'}}
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
@@ -36,6 +39,10 @@ command_information = {'name': ['назван', 'назови', 'напомни'
                        'lessons': ['урок'],
                        'project_name': ['проект'],
                        'step': ['этап']}
+
+command_num_information = {'bpm': ['частота'],
+                           'interval': ['интервал'],
+                           'count': ['количество']}
 
 buttons = ['timer start',
            'timers stop',
@@ -79,11 +86,16 @@ def find_command_type(module_name, command):
 def find_info(module_name, text):
     # Уникальный разделитель, который маловероятно встретить в тексте
     delimiter = "||"
-    replacements_made = None
+    replacements_made = False
     print(f'find_info: text: {text}')
+    result = {}
     # Заменяем слова на ключевые слова с разделителем
+    command_info_dict = command_information | command_num_information # складываем 2 словаря для нахождения ключей
     for info_type in modules[module_name]['info']:
-        for value in command_information[info_type]:
+        if info_type == 'time':
+            result = {'time': parse_time(text)}
+            continue
+        for value in command_info_dict[info_type]:
             # Находим позицию первого вхождения ключевого слова
             start = text.lower().find(value)
             if start != -1:
@@ -96,14 +108,9 @@ def find_info(module_name, text):
                 replacements_made = True
                 break  # Прекращаем поиск после первой замены для данного ключа
 
-    result = {}
-    if module_name == 'metronome':
-        matches = re.findall(r'\d+', text)
-        bpm = int(matches[0]) if matches else 120
-        result = {'bpm': f'{bpm}'}
-        print(result)
     if not replacements_made:
         return result
+
     # Разделяем текст по разделителю
     split_text = text.split(delimiter)
 
@@ -111,6 +118,11 @@ def find_info(module_name, text):
     for i, segment in enumerate(split_text[1:],
                                 start=1):  # Пропускаем первый элемент, так как он перед первым ключевым словом
         key = segment.split()[0]  # Первое слово - ключ
+        if key in command_num_information:  # для числоввых ключей берем первое чило после ключа
+            found_numbers = re.findall(r'\d+', segment)
+            if found_numbers:
+                value = found_numbers[0]
+                result[key] = value
         value = ' '.join(segment.split()[1:])  # Остальная часть - значение
         result[key] = value
     print(f'find_info: {result}')
@@ -133,10 +145,11 @@ def find_target_module(command):
                 target_module = key
     # target_module установлен в первый модуль, найденный в command_text
 
+    module_type = modules[target_module]['type']
     if target_module is None:
-        return None
+        return None, None
 
-    return target_module
+    return target_module, module_type
 
 
 def save_to_base_modules(command):

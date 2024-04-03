@@ -61,6 +61,7 @@ async function sendMessage(customMessage, message_type) {
                 var lastMessageText = $('#chat').children().last().find('.chat-message-text').text();
                 var playButton = $('#chat').children().last().find('.play-audio-button');
                 var progressBar = $('#chat').children().last().find('.audio-progress')[0];
+                scrollToBottom();
                 await playTextUsingServerTTS(lastMessageText, playButton, progressBar);
             }
             if (data.type === 'timer') {
@@ -69,19 +70,25 @@ async function sendMessage(customMessage, message_type) {
                 let timerId = data.timer_div.id;
                 $('#' + timerId + '_start').click();
             }
-
-            if (data.type === 'metronome') {
+            else if (data.type === 'metronome') {
                 $('#toolsPanel').attr('hidden', false);
                 $('#toolsPanel').append(data.metronome_div.div);
                 let metronomeId = data.metronome_div.id;
                 $('#' + metronomeId + '_start_metronome').click();
             }
 
-            if (data.type === 'action_module') {
+            else if (data.type === 'action_module') {
                 $('#toolsPanel').attr('hidden', false);
                 $('#toolsPanel').append(data.action_module_div.div);
                 let action_moduleId = data.action_module_div.id;
                 processAccordion(action_moduleId);
+            }
+
+            else if (data.type === 'memory') {
+                $('#toolsPanel').attr('hidden', false);
+                $('#toolsPanel').append(data.memory_div.div);
+                let memory_moduleId = data.memory_div.id;
+                restartCarousel(memory_moduleId);
             }
 
             $('#start-recognition').attr('disabled', false);

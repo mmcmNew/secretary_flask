@@ -111,7 +111,7 @@ body{margin-top:20px;}
 
 .carousel-image {
   max-height: 100%; /* Ограничиваем максимальную высоту изображения */
-  object-fit: cover; /* Обрезка изображения, чтобы оно заполняло контейнер */
+  object-fit: contain; /* Обрезка изображения, чтобы оно заполняло контейнер */
   position: absolute;
   top: 50%;
   transform: translateY(-50%)

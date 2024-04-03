@@ -108,13 +108,13 @@ def new_message():
     else:
         # при повторном запросе отправляем его секретарю
         users = get_users()
-        target_module = find_target_module(text)
+        target_module, module_type = find_target_module(text)
         print(f'new_message: target_module: {target_module}')
         match target_module:
             case 'timer':
                 div_time = datetime.now().strftime("%Y%m%d%H%M%S")
                 random_id = random.randint(1000, 9999)
-                timer_info = {'time': parse_time(text), 'info': find_info('timer', text),
+                timer_info = {'info': find_info('timer', text),
                               'id': f'{div_time}{random_id}'}
                 ai_answer = {'user_id': 2, 'text': f'Запускаю таймер '}
                 timer_div = render_template('timer.html', timer=timer_info)
@@ -125,7 +125,7 @@ def new_message():
                 metronome_info = {'info': find_info('metronome', text),
                                   'id': f'{div_time}{random_id}'}
                 print(f'new_message: metronome_info: {metronome_info}')
-                ai_answer = {'user_id': 2, 'text': f'Запускаю метроном. bpm {metronome_info['info']['bpm']} '}
+                ai_answer = {'user_id': 2, 'text': f'Запускаю метроном.'}
                 metronome_div = render_template('metronome.html', metronome=metronome_info)
                 message_type = 'metronome'
             case 'trading_journal' | 'diary' | 'project_journal':
@@ -134,13 +134,30 @@ def new_message():
                     command['files'] = request.files
                 result = save_to_base_modules(command) # обработчик для модулей которые сохраняют записи в базу
                 ai_answer = {'user_id': 2, 'text': result['text']}
-            case 'productivity':
+            case 'productivity' | 'demo':
                 action_module = action_module_processing(target_module)
                 if action_module:
                     message_type = 'action_module'
                     ai_answer = {'user_id': 2, 'text': f'Запускаю модуль {target_module}'}
                 else:
                     ai_answer = {'user_id': 2, 'text': 'Проблемы при запуске модуля'}
+            case 'memory':
+                message_type = 'memory'
+                cards_count = find_info('timer', text).get('bpm', 50)
+                folder_path = os.path.join('static', 'images', 'memory')
+                files = os.listdir(folder_path)
+                if not files:
+                    raise ValueError("В папке нет файлов")
+                selected_files = random.choices(files, k=cards_count)
+                div_time = datetime.now().strftime("%Y%m%d%H%M%S")
+                random_id = random.randint(1000, 9999)
+                memory_info = {'id': f'{div_time}{random_id}', 'interval': '2000', 'items': []}
+                for file in selected_files:
+                    name = os.path.splitext(file)[0]
+                    url = f"memory/{file}"
+                    memory_info['items'].append({'text': name, 'url': url})
+                memory_div = render_template('carousel.html', carousel=memory_info)
+                ai_answer = {'user_id': 2, 'text': 'Запускаю тренировку памяти'}
             case 'ai_chat':
                 # Если целевой модуль ai передаем всю команду
                 gemini_answer = gemini_proxy_response(text)
@@ -165,6 +182,9 @@ def new_message():
                         'type': message_type})
     if message_type == 'action_module':
         return jsonify({'div': chat_message, 'action_module_div': {'div': action_module['div'], 'id': action_module['id']},
+                        'type': message_type})
+    if message_type == 'memory':
+        return jsonify({'div': chat_message, 'memory_div': {'div': memory_div, 'id': memory_info['id']},
                         'type': message_type})
     return jsonify({'div': chat_message, 'type': message_type})
 
