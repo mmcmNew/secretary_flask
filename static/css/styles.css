@@ -103,10 +103,12 @@ body{margin-top:20px;}
   height: 100%; /* Высота соответствует высоте carousel-item */
   visibility: hidden;
   display: flex;
+  text-align:center;
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.5); /* Например, полупрозрачный черный фон */
   color: white; /* Цвет текста */
+  font-size: 3em;
 }
 
 .carousel-image {

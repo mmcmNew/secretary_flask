@@ -26,7 +26,7 @@ def generate_tts():
         except OSError as e:
             print(f'Ошибка при удалении файла {file_path}: {e}')
     text = request.form['text']
-    audio_path = tts(text) # Генерируем аудио из текста
+    audio_path = tts(text)  # Генерируем аудио из текста
     return jsonify(audioUrl=audio_path)
 
 
@@ -110,31 +110,24 @@ def new_message():
         users = get_users()
         target_module, module_type = find_target_module(text)
         print(f'new_message: target_module: {target_module}')
-        match target_module:
-            case 'timer':
+        match module_type:
+            case 'component':
                 div_time = datetime.now().strftime("%Y%m%d%H%M%S")
                 random_id = random.randint(1000, 9999)
-                timer_info = {'info': find_info('timer', text),
-                              'id': f'{div_time}{random_id}'}
-                ai_answer = {'user_id': 2, 'text': f'Запускаю таймер '}
-                timer_div = render_template('timer.html', timer=timer_info)
-                message_type = 'timer'
-            case 'metronome':
-                div_time = datetime.now().strftime("%Y%m%d%H%M%S")
-                random_id = random.randint(1000, 9999)
-                metronome_info = {'info': find_info('metronome', text),
+                component_info = {'info': find_info(target_module, text),
                                   'id': f'{div_time}{random_id}'}
-                print(f'new_message: metronome_info: {metronome_info}')
-                ai_answer = {'user_id': 2, 'text': f'Запускаю метроном.'}
-                metronome_div = render_template('metronome.html', metronome=metronome_info)
-                message_type = 'metronome'
-            case 'trading_journal' | 'diary' | 'project_journal':
+                print(f'new_message: component_info: {component_info}')
+                ai_answer = {'user_id': 2, 'text': f'Запускаю {target_module}'}
+                context = {target_module: component_info}
+                component_div = render_template(f'{target_module}.html', **context)
+                message_type = 'component'
+            case 'journal':
                 command = {'target_module': target_module, 'text': text}
                 if request.files:
                     command['files'] = request.files
-                result = save_to_base_modules(command) # обработчик для модулей которые сохраняют записи в базу
+                result = save_to_base_modules(command)  # обработчик для модулей которые сохраняют записи в базу
                 ai_answer = {'user_id': 2, 'text': result['text']}
-            case 'productivity' | 'demo':
+            case 'action_module':
                 action_module = action_module_processing(target_module)
                 if action_module:
                     message_type = 'action_module'
@@ -170,19 +163,21 @@ def new_message():
 
         result = save_to_base(message)
         print(result)
+        div_time = datetime.now().strftime("%Y%m%d%H%M%S")
+        random_id = random.randint(1000, 9999)
+
         message['name'] = users[ai_answer['user_id']]['name']
         message['avatar'] = users[ai_answer['user_id']]['avatar']
+        message['id'] = f'{div_time}{random_id}'
 
     chat_message = render_template('message_template.html', message=message)
-    if message_type == 'timer':
-        return jsonify({'div': chat_message, 'timer_div': {'div': timer_div, 'id': timer_info['id']},
-                        'type': message_type})
-    if message_type == 'metronome':
-        return jsonify({'div': chat_message, 'metronome_div': {'div': metronome_div, 'id': metronome_info['id']},
+    if message_type == 'component':
+        return jsonify({'div': chat_message, 'component': {'div': component_div, 'id': component_info['id']},
                         'type': message_type})
     if message_type == 'action_module':
-        return jsonify({'div': chat_message, 'action_module_div': {'div': action_module['div'], 'id': action_module['id']},
-                        'type': message_type})
+        return jsonify(
+            {'div': chat_message, 'action_module_div': {'div': action_module['div'], 'id': action_module['id']},
+             'type': message_type})
     if message_type == 'memory':
         return jsonify({'div': chat_message, 'memory_div': {'div': memory_div, 'id': memory_info['id']},
                         'type': message_type})

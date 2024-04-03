@@ -62,19 +62,13 @@ async function sendMessage(customMessage, message_type) {
                 var playButton = $('#chat').children().last().find('.play-audio-button');
                 var progressBar = $('#chat').children().last().find('.audio-progress')[0];
                 scrollToBottom();
-                await playTextUsingServerTTS(lastMessageText, playButton, progressBar);
+                await playAudioWithPromise(playButton);
             }
-            if (data.type === 'timer') {
+            if (data.type === 'component') {
                 $('#toolsPanel').attr('hidden', false);
-                $('#toolsPanel').append(data.timer_div.div);
-                let timerId = data.timer_div.id;
-                $('#' + timerId + '_start').click();
-            }
-            else if (data.type === 'metronome') {
-                $('#toolsPanel').attr('hidden', false);
-                $('#toolsPanel').append(data.metronome_div.div);
-                let metronomeId = data.metronome_div.id;
-                $('#' + metronomeId + '_start_metronome').click();
+                $('#toolsPanel').append(data.component.div);
+                let componentId = data.component.id;
+                $('#' + componentId + '_start').click();
             }
 
             else if (data.type === 'action_module') {
@@ -111,3 +105,16 @@ $(document).ready(function() {
     //Прокрутка чата при открытии
     scrollToBottom();
 })
+
+
+function playAudioWithPromise(component) {
+    return new Promise(resolve => {
+        const $component = $(component);
+        if ($component) {
+            $component.click();
+            $component.on('audioTextEnded', () => resolve());
+        } else {
+            resolve();
+        }
+    });
+}

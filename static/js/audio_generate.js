@@ -1,68 +1,71 @@
-function playTextUsingServerTTS(text, buttonElement, progressElement) {
-     return new Promise((resolve, reject) => {
-        buttonElement.html('<span class="spinner-border spinner-border-sm"></span>'); // Замена кнопки на спиннер
-        var pauseSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pause-fill" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/></svg>';
-        var playSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></svg>'
-        // Если аудио уже воспроизводится, останавливаем его
-        if (buttonElement.data('audio')) {
-            buttonElement.data('audio').pause();
-        }
+function bindAudioListeners(audio, buttonElement, progressElement) {
+    audio.addEventListener('canplaythrough', () => {
+        buttonElement.html('<i class="bi bi-pause-fill"></i>'); // Замена спиннера на кнопку паузы
+        buttonElement.prop('disabled', false);
+    });
 
-        // Настройка AJAX запроса
-        $.ajax({
-            type: 'POST',
-            url: '/generate-tts',
-            data: { text: text },
-            success: function(response) {
-                var audioUrl = response.audioUrl;
-                var audio = new Audio(audioUrl);
+    audio.addEventListener('timeupdate', () => {
+        var percentage = (audio.currentTime / audio.duration) * 100;
+        progressElement.style.width = percentage + '%';
+    });
 
-                // Сохраняем аудио в элемент кнопки для последующего доступа
-                buttonElement.data('audio', audio);
+    audio.addEventListener('ended', () => {
+        progressElement.style.width = '0%';
+        buttonElement.html('<i class="bi bi-play-fill"></i>'); // Возврат к кнопке воспроизведения
 
-                // Слушатель для события 'canplaythrough'
-                audio.addEventListener('canplaythrough', () => {
-                    buttonElement.html(pauseSVG); // Замена спиннера на кнопку паузы
-                });
+        buttonElement.trigger('audioTextEnded', [buttonElement.attr('id')]); // триггерим событие 'audioEnded' с ID кнопки
+    });
+}
 
-                // Слушатель для события 'timeupdate'
-                audio.addEventListener('timeupdate', () => {
-                    var percentage = (audio.currentTime / audio.duration) * 100;
-                    progressElement.style.width = percentage + '%';
-                });
+function playTextUsingServerTTS(audio, buttonElement, progressElement) {
+    bindAudioListeners(audio, buttonElement, progressElement);
 
-                // Слушатель для события 'ended'
-                audio.addEventListener('ended', () => {
-                    progressElement.style.width = '0%';
-                    buttonElement.html(playSVG); // Возврат к кнопке воспроизведения
-                    resolve(); // Разрешаем Promise по завершении воспроизведения
-                });
+    if (audio.paused) {
+        audio.play();
+        buttonElement.html('<i class="bi bi-pause-fill"></i>');
+    } else {
+        audio.pause();
+        buttonElement.html('<i class="bi bi-play-fill"></i>');
+    }
+}
 
-                // Обработка нажатия на кнопку
-                buttonElement.off('click').click(() => {
-                    if (audio.paused) {
-                        audio.play();
-                        buttonElement.html(pauseSVG);
-                    } else {
-                        audio.pause();
-                        buttonElement.html(playSVG);
-                    }
-                });
+function generateAudioForButton(buttonElement) {
+    var messageId = buttonElement.attr('id').split('_')[0];
 
-                audio.play();
-            },
-            error: function(error) {
-                reject(error); // Отклоняем Promise в случае ошибки
-            }
+    var messageTextElement = $('#' + messageId + '_messageText');
+    var messageText = messageTextElement.text();
+
+    // Замена кнопки на спиннер
+    buttonElement.html('<span class="spinner-border spinner-border-sm"></span>').prop('disabled', true);
+
+    return new Promise((resolve, reject) => {
+        generateAudioURLFromText(messageText).then(audioUrl => {
+            var audio = new Audio(audioUrl);
+            buttonElement.data('audio', audio);
+            buttonElement.html('<i class="bi bi-play-fill"></i>'); // Возврат к иконке воспроизведения
+            buttonElement.prop('disabled', false);
+            resolve(audio);
+        }).catch(error => {
+            console.error('Error generating audio:', error);
+            reject(error);
         });
     });
 }
 
 $(document).on('click', '.play-audio-button', function() {
-    var messageText = $(this).closest('.chat-message-content').find('.chat-message-text').text();
-    var progressBar = $(this).next('.audio-progress')[0];
-    playTextUsingServerTTS(messageText, $(this), progressBar);
+    var buttonElement = $(this);
+    var audio = buttonElement.data('audio');
+    var progressBar = $('#' + buttonElement.attr('id').split('_')[0] + '_textProgress')[0];
+
+    if (!audio) {
+        generateAudioForButton(buttonElement).then(generatedAudio => {
+            playTextUsingServerTTS(generatedAudio, buttonElement, progressBar);
+        });
+    } else {
+        playTextUsingServerTTS(audio, buttonElement, progressBar);
+    }
 });
+
 
 function generateAudioURLFromText(text) {
     return new Promise((resolve, reject) => {
@@ -79,3 +82,4 @@ function generateAudioURLFromText(text) {
         });
     });
 }
+

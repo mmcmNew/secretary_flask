@@ -8,8 +8,8 @@ modules = {
               'info': ['name', 'time'], 'type': 'component'},
     'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del'],
                   'info': ['name', 'bpm', 'count'], 'type': 'component'},
-    'memory': {'words': ['памят'], 'info': ['name', 'interval', 'count'], 'type': 'action_module'},
-    'ai_chat': {'words': ['расскажи']},
+    'memory': {'words': ['памят'], 'info': ['name', 'interval', 'count'], 'type': 'component'},
+    'ai_chat': {'words': ['расскажи'], 'type': 'ai_chat'},
     'trading_journal': {'words': ['трейд', 'торгов'], 'commands_list': ['create', 'append', 'edit', 'del'],
                         'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment'],
                         'type': 'journal'},
@@ -40,7 +40,7 @@ command_information = {'name': ['назван', 'назови', 'напомни'
                        'project_name': ['проект'],
                        'step': ['этап']}
 
-command_num_information = {'bpm': ['частота'],
+command_num_information = {'bpm': ['частота', 'чистота'],
                            'interval': ['интервал'],
                            'count': ['количество']}
 
