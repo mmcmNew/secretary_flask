@@ -43,7 +43,7 @@ $('#toolsPanel').on('input', '.form-range', function() {
     let carouselId = sliderId.split('_')[0];
     let newInterval = parseInt($(this).val());
 
-    $('#' + carouselId + '_intervalLabel').text((newInterval / 100) + 's');
+    $('#' + carouselId + '_intervalLabel').text((newInterval / 1000) + 's');
 
     // Изменяем data-bs-interval для карусели
     $('#' + carouselId + '_carousel').attr('data-bs-interval', newInterval);

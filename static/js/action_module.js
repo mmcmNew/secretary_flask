@@ -67,7 +67,7 @@ function processComponent(component) {
             startMetronome(componentId.split('_')[0]);
             $component.on('metronomeStopped', () => resolve());
         } else if (componentId.includes('_audioContainer')) {
-            startAudio(componentId.split('_')[0]);
+            togglePlayPause(componentId.split('_')[0]);
             $component.on('audioEnded', () => resolve());
         } else if (componentId.includes('_textContainer')) {
             const textPlayButton = $component.find('.play-audio-button');

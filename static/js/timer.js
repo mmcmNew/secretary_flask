@@ -21,7 +21,6 @@ $(document).ready(function() {
 });
 
 function startTimer(timerId) {
-    // console.log(timerId)
     let timerContainer = $("#" + timerId + "_timerContainer");
     if (!timerContainer.data('isRunning')) {
         let timeRemaining = getTimeRemaining(timerId);
@@ -29,26 +28,56 @@ function startTimer(timerId) {
             resetTimeInputs(timerId);
             timeRemaining = getTimeRemaining(timerId);
         }
-        timerContainer.data('timeRemaining', timeRemaining);
-        timerContainer.data('timer', setInterval(function() { updateTimer(timerId) }, 1000));
+
+        // Создаем Worker
+        let timerWorker = new Worker('static/js/timerWorker.js');
+        timerContainer.data('timerWorker', timerWorker);
         timerContainer.data('isRunning', true);
+
+        // Обработка сообщений от Worker
+        timerWorker.onmessage = function(e) {
+            const { action, timeRemaining } = e.data;
+            switch (action) {
+                case 'update':
+                    displayTime(timerId, timeRemaining);
+                    timerContainer.data('timeRemaining', timeRemaining);
+                    break;
+                case 'end':
+                    stopTimer(timerId);
+                    playTimerEndSoundAndText(timerId);
+                    break;
+            }
+        };
+
+        // Запуск Worker
+        timerWorker.postMessage({ action: 'start', timeRemaining });
     }
 }
 
 function stopTimer(timerId) {
     let timerContainer = $("#" + timerId + "_timerContainer");
-    if (timerContainer.data('isRunning')) {
-        clearInterval(timerContainer.data('timer'));
-        timerContainer.data('isRunning', false);
+    let timerWorker = timerContainer.data('timerWorker');
+    if (timerWorker) {
+        timerWorker.terminate(); // Останавливаем Worker
+        timerContainer.removeData('timerWorker');
     }
+    timerContainer.data('isRunning', false);
+    resetTimeInputs(timerId);
 }
 
 function resetTimer(timerId) {
     let timerContainer = $("#" + timerId + "_timerContainer");
-    clearInterval(timerContainer.data('timer'));
-    resetTimeInputs(timerId);
+    let timerWorker = timerContainer.data('timerWorker');
+    if (timerWorker) {
+        timerWorker.terminate(); // Останавливаем и удаляем Worker
+        timerContainer.removeData('timerWorker');
+    }
+    resetTimeInputs(timerId); // Сброс визуального отображения таймера
     timerContainer.data('isRunning', false);
+    // Удаляем оставшееся время из данных, если есть
+    timerContainer.removeData('timeRemaining');
 }
+
 
 function updateTimer(timerId) {
     let timerContainer = $("#" + timerId + "_timerContainer");
@@ -93,12 +122,15 @@ function formatTime(time) {
 
 function closeTimer(timerId) {
     let timerContainer = $("#" + timerId + "_timerContainer");
-    if (timerContainer.data('isRunning')) {
-        clearInterval(timerContainer.data('timer'));
+    let timerWorker = timerContainer.data('timerWorker');
+    if (timerWorker) {
+        timerWorker.terminate(); // Останавливаем и удаляем Worker
+        timerContainer.removeData('timerWorker');
     }
-    timerContainer.remove();
-    if ($("#toolsPanel").children().length === 0)
-        $('#toolsPanel').attr('hidden', true);
+    timerContainer.remove(); // Удаление контейнера таймера из DOM
+    if ($("#toolsPanel").children().length === 0) {
+        $('#toolsPanel').attr('hidden', true); // Скрываем панель инструментов, если таймеров больше нет
+    }
 }
 
 function playTimerEndSoundAndText(timerId) {

@@ -9,7 +9,7 @@
     <!-- Поле ввода количества слов -->
     <div class="row mb-2">
         <div class="col">
-            <input type="number" class="form-control" id="{{ memory.id }}_wordCount" placeholder="Количество слов" value="{{ memory.word_count | default(0) }}">
+            <input type="number" class="form-control" id="{{ memory.id }}_wordsCount" placeholder="Количество слов" value="{{ memory.word_count | default(50) }}">
         </div>
          <div class="col">
             <button class="btn btn-sm btn-outline-dark" id="{{ memory.id }}_newSet">Случайный набор карточек</button>
@@ -19,14 +19,25 @@
     <!-- Многострочное поле ввода текста -->
     <div class="row mb-2">
         <div class="col">
-            <textarea class="form-control" id="{{ memory.id }}_textInput" rows="3" placeholder="Введите текст">{{ memory.text | default('') }}</textarea>
+            <div class="accordion" id="{{ memory.id }}_accordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="{{ memory.id }}_heading">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#{{ memory.id }}_collapse" aria-expanded="true" aria-controls="{{ memory.id }}_collapse">
+                    Набор слов для запоминания
+                  </button>
+                </h2>
+                <div id="{{ memory.id }}_collapse" class="accordion-collapse collapse show" aria-labelledby="{{ memory.id }}_heading" data-bs-parent="#{{ memory.id }}_accordion">
+                  <div class="accordion-body">
+                    <!-- Поле ввода текста -->
+                    <textarea class="form-control" id="{{ memory.id }}_textInput" rows="3" placeholder="Введите текст">{{ memory.text | default('') }}</textarea>
+                    <input class="form-control mt-2" id="{{ memory.id }}_delimiter" placeholder="Введите разделитель" value="{{ memory.delimiter | default('') }}">
+                  </div>
+                </div>
+              </div>
+            </div>
         </div>
     </div>
-    <div class="row mb-2">
-        <div class="col">
-            <input type="number" class="form-control" id="{{ memory.id }}delimiter" placeholder="Введите разделитель" value="{{ memory.delimiter | default('') }}">
-        </div>
-    </div>
+
     <!-- Кнопка 'Начать запоминание' -->
     <div class="row mb-2">
         <div class="col">
@@ -37,7 +48,9 @@
     <!-- Строка для вставки карусели -->
     <div class="row mb-2">
         <div id="{{ memory.id }}_carouselMemory" class="col">
-
+            {% with carousel=memory %}
+                {% include 'carousel.html' %}
+            {% endwith %}
         </div>
     </div>
 
@@ -52,5 +65,8 @@
         <div class="col">
             <button class="btn btn-sm btn btn-outline-dark" id="{{ memory.id }}_checkText">Проверить</button>
         </div>
+    </div>
+    <div class="row">
+        <div id="{{ memory.id }}_resultContainer" class="result-container"></div>
     </div>
 </div>

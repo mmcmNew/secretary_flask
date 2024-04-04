@@ -1,5 +1,5 @@
-<div id="{{ audio.id }}_audioContainer" class="rounded border border-mb-1" data-audio-src="static/audio/{{ audio.info['url'] }}">
-    <p id="{{ audio.id }}_audio_name" class="text-center">{{ audio.info['name'] }}</p>
+<div id="{{ audio.id }}_audioContainer" class="rounded border border-mb-1" data-audio-src="static/audio/{{ audio['url'] }}">
+    <p id="{{ audio.id }}_audio_name" class="text-center">{{ audio['name'] }}</p>
 
     <div class="row align-items-center g-2">
         <!-- Кнопки воспроизведения и остановки -->
@@ -12,13 +12,9 @@
 
         <!-- Ползунок прогресса -->
         <div class="col">
-            <input type="range" class="progress-bar w-100" id="{{ audio.id }}_audio_progress" value="0">
+            <input type="range" class="progress-bar w-100" id="{{ audio.id }}_audio_progress" value="0.0">
         </div>
 
-        <!-- Регулятор громкости -->
-        <div class="col-auto" style="width: 50px;">
-            <input type="range" id="{{ audio.id }}_audio_volume" name="volume" min="0" max="1" step="0.1">
-        </div>
 
         <!-- Кнопка закрытия -->
         <div class="col-auto">

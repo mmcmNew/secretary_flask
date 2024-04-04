@@ -1,4 +1,5 @@
 import os
+import random
 import re
 import sqlite3
 from datetime import datetime
@@ -18,6 +19,7 @@ modules = {
     'project_journal': {'words': ['разработ'], 'commands_list': ['create', 'append', 'edit', 'del'],
                         'info': ['project_name', 'step', 'comment'], 'type': 'journal'},
     'productivity': {'words': ['фокусир'], 'commands_list': ['start', 'stop'], 'type': 'action_module'},
+    'relax': {'words': ['расслабл'], 'commands_list': ['start', 'stop'], 'type': 'action_module'},
     'demo': {'words': ['демонстрац'], 'commands_list': ['start', 'stop'], 'type': 'action_module'}}
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
@@ -108,6 +110,13 @@ def find_info(module_name, text):
                 replacements_made = True
                 break  # Прекращаем поиск после первой замены для данного ключа
 
+    if module_name == 'memory':
+        cards_count = result.get('count', None)
+        if not cards_count:
+            result['count'] = 50
+            cards_count = 50
+        result['items'] = generate_cards(cards_count)
+
     if not replacements_made:
         return result
 
@@ -125,8 +134,31 @@ def find_info(module_name, text):
                 result[key] = value
         value = ' '.join(segment.split()[1:])  # Остальная часть - значение
         result[key] = value
-    print(f'find_info: {result}')
+
     return result
+
+
+def generate_cards(cards_count=50, cards_type='references', string_words={}):
+    items = []
+    folder_path = os.path.join('static', 'images', 'memory')
+    if cards_type == 'references':
+        files = os.listdir(folder_path)
+        if not files:
+            raise ValueError("В папке нет файлов")
+        selected_files = random.choices(files, k=cards_count)
+        for file in selected_files:
+            name = os.path.splitext(file)[0]
+            url = f"memory/{file}"
+            items.append({'text': name, 'url': url})
+    elif cards_type == 'words':
+        delimiter = string_words.get('delimiter', ' ')
+        words = string_words['words'].split(delimiter)
+        for word in words:
+            name = word
+            url = f"memory/placeholder.jpg"
+            items.append({'text': name, 'url': url})
+
+    return items
 
 
 def find_target_module(command):

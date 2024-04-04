@@ -1,6 +1,7 @@
 import glob
 import os
 import json
+import re
 from datetime import datetime
 
 import sqlite3
@@ -9,7 +10,7 @@ import random
 from flask import Flask, render_template, jsonify, request
 
 from modules.geminiVPN import gemini_proxy_response
-from utilites import find_target_module, save_to_base, save_to_base_modules, find_info, parse_time
+from utilites import find_target_module, save_to_base, save_to_base_modules, find_info, generate_cards
 from text_to_edge_tts import tts
 
 app = Flask(__name__)
@@ -92,6 +93,62 @@ def test():
     return render_template('test.html')
 
 
+@app.route('/memory', methods=['POST'])
+def memory():
+    data = request.json
+    request_type = data.get('type', None)
+    params = data.get('params', None)
+    if request_type == 'words':
+        new_cards = generate_cards(cards_type=request_type, string_words=params)
+    elif request_type == 'check':
+        pass
+    else:
+        count = int(params.get('count', 50))
+        new_cards = generate_cards(count)
+
+    if not new_cards:
+        new_cards = generate_cards(50)
+    return jsonify({'cards': new_cards})
+
+
+@app.route('/check_results', methods=['POST'])
+def check_results():
+    data = request.json
+    original_text = data.get('text', '')
+    user_text = data.get('userText', '')
+
+    # Удаление знаков препинания и приведение к нижнему регистру
+    cleaned_original_text = re.sub(r'[^\w\s]', '', original_text).lower()
+    cleaned_user_text = re.sub(r'[^\w\s]', '', user_text).lower()
+
+    # Разделение строк на слова
+    original_words = cleaned_original_text.split()
+    user_words = cleaned_user_text.split()
+
+    # Сравнение слов по позициям и выделение неправильных
+    result_words = []
+    correct_count = 0
+    incorrect_count = 0
+    for index, word in enumerate(user_words):
+        if index < len(original_words) and word == original_words[index]:
+            correct_count += 1
+            result_words.append(word)
+        else:
+            incorrect_count += 1
+            # Добавление HTML тега для выделения слова красным цветом
+            result_words.append(f'<span style="color: red;">{word}</span>')
+
+    # Подсчет общего результата
+    total_words = len(original_words)
+    correct_percentage = int((correct_count / total_words) * 100) if total_words else 0
+
+    # Формирование строки с результатом
+    result_text = ' '.join(result_words)
+    final_result = f'Результат: {correct_percentage}% ({correct_count}/{total_words}). <br>{result_text}'
+
+    return jsonify(final_result)
+
+
 @app.route('/new-message', methods=['POST'])
 def new_message():
     current_time = datetime.now().strftime("%H:%M")
@@ -114,8 +171,8 @@ def new_message():
             case 'component':
                 div_time = datetime.now().strftime("%Y%m%d%H%M%S")
                 random_id = random.randint(1000, 9999)
-                component_info = {'info': find_info(target_module, text),
-                                  'id': f'{div_time}{random_id}'}
+                component_info = find_info(target_module, text)
+                component_info['id'] = f'{div_time}{random_id}'
                 print(f'new_message: component_info: {component_info}')
                 ai_answer = {'user_id': 2, 'text': f'Запускаю {target_module}'}
                 context = {target_module: component_info}
@@ -134,23 +191,6 @@ def new_message():
                     ai_answer = {'user_id': 2, 'text': f'Запускаю модуль {target_module}'}
                 else:
                     ai_answer = {'user_id': 2, 'text': 'Проблемы при запуске модуля'}
-            case 'memory':
-                message_type = 'memory'
-                cards_count = find_info('timer', text).get('bpm', 50)
-                folder_path = os.path.join('static', 'images', 'memory')
-                files = os.listdir(folder_path)
-                if not files:
-                    raise ValueError("В папке нет файлов")
-                selected_files = random.choices(files, k=cards_count)
-                div_time = datetime.now().strftime("%Y%m%d%H%M%S")
-                random_id = random.randint(1000, 9999)
-                memory_info = {'id': f'{div_time}{random_id}', 'interval': '2000', 'items': []}
-                for file in selected_files:
-                    name = os.path.splitext(file)[0]
-                    url = f"memory/{file}"
-                    memory_info['items'].append({'text': name, 'url': url})
-                memory_div = render_template('carousel.html', carousel=memory_info)
-                ai_answer = {'user_id': 2, 'text': 'Запускаю тренировку памяти'}
             case 'ai_chat':
                 # Если целевой модуль ai передаем всю команду
                 gemini_answer = gemini_proxy_response(text)
@@ -178,9 +218,6 @@ def new_message():
         return jsonify(
             {'div': chat_message, 'action_module_div': {'div': action_module['div'], 'id': action_module['id']},
              'type': message_type})
-    if message_type == 'memory':
-        return jsonify({'div': chat_message, 'memory_div': {'div': memory_div, 'id': memory_info['id']},
-                        'type': message_type})
     return jsonify({'div': chat_message, 'type': message_type})
 
 

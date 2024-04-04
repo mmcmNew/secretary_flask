@@ -62,7 +62,8 @@ async function sendMessage(customMessage, message_type) {
                 var playButton = $('#chat').children().last().find('.play-audio-button');
                 var progressBar = $('#chat').children().last().find('.audio-progress')[0];
                 scrollToBottom();
-                await playAudioWithPromise(playButton);
+                if (data.type !== 'action_module')
+                    playAudioWithPromise(playButton);
             }
             if (data.type === 'component') {
                 $('#toolsPanel').attr('hidden', false);
@@ -75,6 +76,7 @@ async function sendMessage(customMessage, message_type) {
                 $('#toolsPanel').attr('hidden', false);
                 $('#toolsPanel').append(data.action_module_div.div);
                 let action_moduleId = data.action_module_div.id;
+                await playAudioWithPromise(playButton);
                 processAccordion(action_moduleId);
             }
 

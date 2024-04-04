@@ -21,8 +21,8 @@
       <!-- Столбец для кнопок управления каруселью -->
       <div class="col-auto">
           <div class="btn-group btn-group-sm" role="group">
-              <button class="btn btn-primary pauseOrResumeCarousel" data-target="#{{ carousel.id }}_carousel"><i class="bi bi-play-fill"></i></button>
-              <button class="btn btn-secondary restartCarousel" data-target="#{{ carousel.id }}_carousel"><i class="bi bi-arrow-counterclockwise"></i></button>
+              <button id="{{ carousel.id }}_playButton" class="btn btn-primary pauseOrResumeCarousel" data-target="#{{ carousel.id }}_carousel"><i class="bi bi-play-fill"></i></button>
+              <button id="{{ carousel.id }}_restartButton" class="btn btn-secondary restartCarousel" data-target="#{{ carousel.id }}_carousel"><i class="bi bi-arrow-counterclockwise"></i></button>
           </div>
       </div>
 
@@ -31,11 +31,11 @@
           <input type="range" class="form-range" id="{{ carousel.id }}_intervalRange" min="500" max="15000" step="500" value="{{ carousel.interval | default(1000) }}">
       </div>
       <div class="col-auto">
-        <span id="{{ carousel.id }}_intervalLabel" class="interval-label">10s</span>
+        <span id="{{ carousel.id }}_intervalLabel" class="interval-label">1s</span>
     </div>
       <div class="col">
         <div class="form-check form-switch col-auto">
-            <input class="form-check-input" type="checkbox" role="switch" id="{{ carousel.id }}_soundModeSwitch" checked>
+            <input class="form-check-input" type="checkbox" role="switch" id="{{ carousel.id }}_soundModeSwitch">
             <label class="form-check-label" for="{{ carousel.id }}_soundModeSwitch">Звук</label>
         </div>
           <div class="form-check form-switch col-auto">

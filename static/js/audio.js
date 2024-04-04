@@ -1,40 +1,72 @@
-// Функция для начала воспроизведения
-function startAudio(audioId) {
+function togglePlayPause(audioId) {
     let audioContainer = document.getElementById(audioId + "_audioContainer");
-    let audio = new Audio(audioContainer.getAttribute('data-audio-src'));
+    let audio = audioContainer.audio || new Audio(audioContainer.getAttribute('data-audio-src'));
+    let playPauseButton = document.getElementById(audioId + "_audio_start"); // Кнопка воспроизведения/паузы
+    let progressBar = document.getElementById(audioId + "_audio_progress"); // Получаем ползунок прогресса
 
-    // Установка громкости и позиции
-    audio.volume = parseFloat(document.getElementById(audioId + "_audio_volume").value);
+    // Обновление или установка аудио
+    if (!audioContainer.audio) {
+        // Установка слушателей событий только один раз
+        audio.addEventListener('loadedmetadata', () => {
+            audioContainer.audio = audio;
+            // Первоначальная установка currentTime, если ползунок был перемещен до воспроизведения
+            audio.currentTime = parseFloat(progressBar.value) * audio.duration / 100;
+        });
+        audio.addEventListener('timeupdate', () => {
+            let progress = (audio.currentTime / audio.duration) * 100;
+            progressBar.value = progress;
+        });
+        audio.onended = () => {
+            audioContainer.dispatchEvent(new CustomEvent('audioEnded', { detail: audioId }));
+            playPauseButton.innerHTML = '<i class="bi bi-play-fill"></i>';
+            progressBar.disabled = false;
+        };
+    }
 
-    audio.addEventListener('loadedmetadata', function() {
-        // Теперь можно безопасно устанавливать currentTime
-        audio.currentTime = parseFloat(document.getElementById(audioId + "_audio_progress").value) * audio.duration / 100;
-    });
-
-    // Начало воспроизведения
-    audio.play();
-
-    // Обработчик события завершения воспроизведения
-    audio.onended = function() {
-        // console.log("Аудио " + audioId + " завершено");
-        audioContainer.dispatchEvent(new CustomEvent('audioEnded', { detail: audioId }));
-        // Другие действия после завершения воспроизведения
-    };
-
-    // Сохраняем объект Audio
-    audioContainer.audio = audio;
+    // Проверка и управление воспроизведением/паузой
+    if (audio.paused || audio.ended) {
+        playPauseButton.innerHTML = '<i class="bi bi-pause-fill"></i>';
+        progressBar.disabled = true; // Опционально, если вы хотите сделать ползунок неактивным во время воспроизведения
+        // Установка currentTime при каждом снятии с паузы в соответствии с положением ползунка
+        if (audio.readyState >= 2) { // Убедимся, что метаданные достаточно загружены для установки currentTime
+            audio.currentTime = parseFloat(progressBar.value) * audio.duration / 100;
+        }
+        audio.play();
+    } else {
+        audio.pause();
+        playPauseButton.innerHTML = '<i class="bi bi-play-fill"></i>';
+        progressBar.disabled = false; // Снова делаем ползунок активным
+    }
 }
 
-// Функция для остановки аудио
 function stopAudio(audioId) {
     let audioContainer = document.getElementById(audioId + "_audioContainer");
     let audio = audioContainer.audio;
+    let progressBar = document.getElementById(audioId + "_audio_progress"); // Ползунок прогресса
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
-        delete audioContainer.audio;
+        progressBar.value = 0; // Сбрасываем ползунок прогресса
+        document.getElementById(audioId + "_audio_start").innerHTML = '<i class="bi bi-play-fill"></i>'; // Сбрасываем кнопку на воспроизведение
+        progressBar.disabled = false; // Делаем ползунок прогресса активным после остановки
     }
 }
+
+
+document.getElementById('toolsPanel').addEventListener('click', function(event) {
+    let target = event.target.closest('button'); // Используем closest для улучшения селектора
+    if (!target) return; // Выход, если клик не по кнопке
+    let audioId = target.id.split('_')[0];
+
+    if (target.classList.contains('startAudio') || target.classList.contains('pauseAudio')) {
+        togglePlayPause(audioId);
+    } else if (target.classList.contains('stopAudio')) {
+        stopAudio(audioId);
+    } else if (target.classList.contains('closeAudio')) {
+        closeAudioPlayer(audioId);
+    }
+});
+
 
 // Функция для закрытия аудиоплеера
 function closeAudioPlayer(audioId) {
@@ -42,42 +74,3 @@ function closeAudioPlayer(audioId) {
     stopAudio(audioId);  // Остановка воспроизведения перед закрытием
     audioContainer.parentNode.removeChild(audioContainer);  // Удаление контейнера
 }
-
-// Слушатели событий для кнопок
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('toolsPanel').addEventListener('click', function(event) {
-        let target = event.target;
-        let audioId = target.id.split('_')[0];
-        if (target.classList.contains('startAudio')) {
-            startAudio(audioId);
-        } else if (target.classList.contains('stopAudio')) {
-            stopAudio(audioId);
-        } else if (target.classList.contains('closeAudio')) {
-            closeAudioPlayer(audioId);
-        }
-    });
-
-    // Слушатель событий для изменения громкости
-    document.getElementById('toolsPanel').addEventListener('input', function(event) {
-        if (event.target.classList.contains('audio-volume')) {
-            let audioId = event.target.id.split('_')[0];
-            let audioContainer = document.getElementById(audioId + "_audioContainer");
-            let audio = audioContainer.audio;
-            if (audio) {
-                audio.volume = parseFloat(event.target.value);
-            }
-        }
-    });
-
-    // Слушатель событий для перемотки
-    document.getElementById('toolsPanel').addEventListener('input', function(event) {
-        if (event.target.classList.contains('audio-progress')) {
-            let audioId = event.target.id.split('_')[0];
-            let audioContainer = document.getElementById(audioId + "_audioContainer");
-            let audio = audioContainer.audio;
-            if (audio) {
-                audio.currentTime = parseFloat(event.target.value) * audio.duration / 100;
-            }
-        }
-    });
-});
