@@ -1,0 +1,56 @@
+<div id="{{ memory.id }}_memoryContainer" class="container mt-3 border border-mb-1">
+    <!-- Кнопки управления -->
+    <div class="row mb-2">
+        <div class="col d-flex justify-content-end">
+            <button class="btn btn-sm btn-outline-dark closeMemory" id="{{ memory.id }}_closeMemory"><i class="bi bi-x-circle"></i></button>
+        </div>
+    </div>
+
+    <!-- Поле ввода количества слов -->
+    <div class="row mb-2">
+        <div class="col">
+            <input type="number" class="form-control" id="{{ memory.id }}_wordCount" placeholder="Количество слов" value="{{ memory.word_count | default(0) }}">
+        </div>
+         <div class="col">
+            <button class="btn btn-sm btn-outline-dark" id="{{ memory.id }}_newSet">Случайный набор карточек</button>
+        </div>
+    </div>
+
+    <!-- Многострочное поле ввода текста -->
+    <div class="row mb-2">
+        <div class="col">
+            <textarea class="form-control" id="{{ memory.id }}_textInput" rows="3" placeholder="Введите текст">{{ memory.text | default('') }}</textarea>
+        </div>
+    </div>
+    <div class="row mb-2">
+        <div class="col">
+            <input type="number" class="form-control" id="{{ memory.id }}delimiter" placeholder="Введите разделитель" value="{{ memory.delimiter | default('') }}">
+        </div>
+    </div>
+    <!-- Кнопка 'Начать запоминание' -->
+    <div class="row mb-2">
+        <div class="col">
+            <button class="btn btn-sm btn-outline-dark" id="{{ memory.id }}_startMemorizing">Начать запоминание</button>
+        </div>
+    </div>
+
+    <!-- Строка для вставки карусели -->
+    <div class="row mb-2">
+        <div id="{{ memory.id }}_carouselMemory" class="col">
+
+        </div>
+    </div>
+
+    <!-- Многострочное поле ввода текста для проверки -->
+    <div class="row mb-2">
+        <div class="col">
+            <textarea class="form-control" id="{{ memory.id }}_checkTextInput" rows="3" placeholder="Введите текст для проверки"></textarea>
+        </div>
+    </div>
+    <!-- Кнопка 'Проверить' -->
+    <div class="row">
+        <div class="col">
+            <button class="btn btn-sm btn btn-outline-dark" id="{{ memory.id }}_checkText">Проверить</button>
+        </div>
+    </div>
+</div>

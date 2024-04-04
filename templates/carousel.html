@@ -1,0 +1,53 @@
+<div id="{{ carousel.id }}_carouselContainer">
+  <div id="{{ carousel.id }}_carousel" class="carousel slide square-div" data-bs-ride="carousel" data-bs-pause="true" data-bs-interval="{{ carousel.interval | default(2000) }}">
+    <div class="carousel-inner border border-mb-1 square-content">
+        {% for item in carousel['items'] %}
+        <div class="carousel-item {% if loop.first %} active {% endif %}">
+            <img src="{% if item['url'] %} static/images/{{ item['url'] }} {% else %} static/images/placeholder.jpg {% endif %}" class="d-block w-100 h-100 carousel-image" alt="{{ item['text'] }}">
+        </div>
+        {% endfor %}
+    </div>
+    <div id="{{ carousel.id }}_carouselOverlay" class="carousel-overlay" >{{ carousel['items'][0]['text'] }}</div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#{{ carousel.id }}_carousel" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#{{ carousel.id }}_carousel" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </button>
+  </div>
+  <div class="row align-items-center g-2">
+      <!-- Столбец для кнопок управления каруселью -->
+      <div class="col-auto">
+          <div class="btn-group btn-group-sm" role="group">
+              <button class="btn btn-primary pauseOrResumeCarousel" data-target="#{{ carousel.id }}_carousel"><i class="bi bi-play-fill"></i></button>
+              <button class="btn btn-secondary restartCarousel" data-target="#{{ carousel.id }}_carousel"><i class="bi bi-arrow-counterclockwise"></i></button>
+          </div>
+      </div>
+
+      <!-- Столбец для ползунка изменения интервала -->
+      <div class="col">
+          <input type="range" class="form-range" id="{{ carousel.id }}_intervalRange" min="500" max="15000" step="500" value="{{ carousel.interval | default(1000) }}">
+      </div>
+      <div class="col-auto">
+        <span id="{{ carousel.id }}_intervalLabel" class="interval-label">10s</span>
+    </div>
+      <div class="col">
+        <div class="form-check form-switch col-auto">
+            <input class="form-check-input" type="checkbox" role="switch" id="{{ carousel.id }}_soundModeSwitch" checked>
+            <label class="form-check-label" for="{{ carousel.id }}_soundModeSwitch">Звук</label>
+        </div>
+          <div class="form-check form-switch col-auto">
+            <input class="form-check-input" type="checkbox" role="switch" id="{{ carousel.id }}_textModeSwitch" >
+            <label class="form-check-label" for="{{ carousel.id }}_textModeSwitch">Текст</label>
+        </div>
+      </div>
+
+          <!-- Столбец для кнопки закрытия -->
+      <div class="col-auto">
+          <button id="{{ carousel.id }}_close" class="btn btn-outline-dark btn-sm closeCarousel"><i class="bi bi-x-circle"></i></button>
+      </div>
+  </div>
+
+</div>

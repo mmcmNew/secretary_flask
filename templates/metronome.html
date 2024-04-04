@@ -1,0 +1,15 @@
+<div id="{{ metronome.id }}_metronomeContainer" class="rounded border border-mb-1 text-center">
+    <input type="text" id="{{ metronome.id }}_input" class="form-control form-control-sm" value="{{ metronome.info['name'] }}">
+    <p id="{{ metronome.id }}_label" class="badge text-bg-primary fw-bold fs-3 mt-1 text-uppercase">{{ metronome.info['bpm'] | default('120', true) }} bpm</p>
+    <input type="range" class="form-range rangeMetronome" min="1" max="240" step="1" id="{{ metronome.id }}_metronome_range" value="{{ metronome.info['bpm'] }}">
+    <div class="btn-toolbar justify-content-between" role="toolbar">
+        <div class="btn-group btn-group-sm" role="group">
+            <button id="{{ metronome.id }}_start" class="btn btn-outline-dark startMetronome"><i class="bi bi-play-fill"></i></button>
+            <button id="{{ metronome.id }}_stop" class="btn btn-outline-dark stopMetronome"><i class="bi bi-stop-fill"></i></button>
+        </div>
+        <input type="number" id="{{ metronome.id }}_tick_count" value="{{ metronome.info['count'] }}" placeholder="Ticks Count">
+        <div class="btn-group btn-group-sm" role="group">
+            <button id="{{ metronome.id }}_close_metronome" class="btn btn-outline-dark btn-sm closeMetronome"><i class="bi bi-x-circle"></i></button>
+        </div>
+    </div>
+</div>
