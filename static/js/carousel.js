@@ -124,7 +124,7 @@ $('#toolsPanel').on('click', '.carousel-overlay', function() {
 });
 
 
-$('#toolsPanel').on('change', '.form-check-input', function() {
+$('#toolsPanel').on('change', '.textModeSwitch', function() {
     var carouselId = $(this).attr('id').split('_')[0];
     var overlay = $('#' + carouselId + '_carouselOverlay');
 

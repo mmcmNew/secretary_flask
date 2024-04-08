@@ -14,6 +14,9 @@ modules = {
     'trading_journal': {'words': ['трейд', 'торгов'], 'commands_list': ['create', 'append', 'edit', 'del'],
                         'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment'],
                         'type': 'journal'},
+    'backtest_journal': {'words': ['тест'], 'commands_list': ['create', 'append', 'edit', 'del'],
+                         'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment'],
+                         'type': 'journal'},
     'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
               'info': ['reason', 'result', 'lessons', 'comment'], 'type': 'journal'},
     'project_journal': {'words': ['разработ'], 'commands_list': ['create', 'append', 'edit', 'del'],
@@ -92,7 +95,7 @@ def find_info(module_name, text):
     print(f'find_info: text: {text}')
     result = {}
     # Заменяем слова на ключевые слова с разделителем
-    command_info_dict = command_information | command_num_information # складываем 2 словаря для нахождения ключей
+    command_info_dict = command_information | command_num_information  # складываем 2 словаря для нахождения ключей
     for info_type in modules[module_name]['info']:
         if info_type == 'time':
             result = {'time': parse_time(text)}
@@ -111,10 +114,8 @@ def find_info(module_name, text):
                 break  # Прекращаем поиск после первой замены для данного ключа
 
     if module_name == 'memory':
-        cards_count = result.get('count', None)
-        if not cards_count:
-            result['count'] = 50
-            cards_count = 50
+        cards_count = int(result.get('count', 50))
+        result['count'] = cards_count
         result['items'] = generate_cards(cards_count)
 
     if not replacements_made:
@@ -127,18 +128,19 @@ def find_info(module_name, text):
     for i, segment in enumerate(split_text[1:],
                                 start=1):  # Пропускаем первый элемент, так как он перед первым ключевым словом
         key = segment.split()[0]  # Первое слово - ключ
-        if key in command_num_information:  # для числоввых ключей берем первое чило после ключа
+        if key in command_num_information:  # для числовых ключей берем первое число после ключа
             found_numbers = re.findall(r'\d+', segment)
             if found_numbers:
                 value = found_numbers[0]
                 result[key] = value
+                continue
         value = ' '.join(segment.split()[1:])  # Остальная часть - значение
         result[key] = value
 
     return result
 
 
-def generate_cards(cards_count=50, cards_type='references', string_words={}):
+def generate_cards(cards_count=50, cards_type='references', string_words=None):
     items = []
     folder_path = os.path.join('static', 'images', 'memory')
     if cards_type == 'references':
@@ -167,7 +169,8 @@ def find_target_module(command):
         return None
 
     target_module = None
-    # Определяем модуль по словарю. Словарь Модуль:{[Список слов активации], [Список команд модуля], [Список информации]}
+    # Определяем модуль по словарю.
+    # Словарь Модуль:{[Список слов активации], [Список команд модуля], [Список информации]}
     earliest_occurrence = len(command) + 1
     for key, values in modules.items():
         for module_command in values['words']:
@@ -177,10 +180,10 @@ def find_target_module(command):
                 target_module = key
     # target_module установлен в первый модуль, найденный в command_text
 
-    module_type = modules[target_module]['type']
     if target_module is None:
         return None, None
 
+    module_type = modules[target_module]['type']
     return target_module, module_type
 
 
@@ -192,7 +195,6 @@ def save_to_base_modules(command):
     if module_name is None:
         return None
     # Получаем тип команды
-    result = ''
     command_type = find_command_type(module_name, command_text)
     print(f'save_to_base: command_type: {command_type}')
     match command_type:
@@ -220,12 +222,12 @@ def save_to_base_modules(command):
 
 
 def save_to_base(message):
+    table_name = message.get('table_name', '')
     try:
         connection = sqlite3.connect('database.db')
         cursor = connection.cursor()
         current_date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M")
-        table_name = message.get('table_name', '')
         columns = []
         values = []
         print(f'save_to_base: message: {message}')
@@ -235,7 +237,7 @@ def save_to_base(message):
             trading_day = message.get('trading_day', current_date)
             message['trading_day'] = trading_day
             message['time'] = current_time
-        if table_name == 'diary' or table_name == 'project_journal':
+        if table_name in ('diary', 'project_journal', 'backtest_journal'):
             message['date'] = current_date
             message['time'] = current_time
             # Собираем названия столбцов и их значения из словаря message
@@ -265,11 +267,11 @@ def save_to_base(message):
 
 
 def append_to_base(message):
+    table_name = message.get('table_name', None)
     try:
         connection = sqlite3.connect('database.db')
         cursor = connection.cursor()
         current_time = datetime.now().strftime("%H:%M")
-        table_name = message.get('table_name', None)
         del message['table_name']
         if table_name is None or message == {}:
             return None, f'Уточните что нужно добавить в журнал'
@@ -315,7 +317,7 @@ def save_files(files):
         print(f'save_files: files_list: {files_list}, dir_name: {dir_name}')
         if files_list:
             current_month = datetime.now().strftime('%m')
-            save_path = os.path.join(os.path.dirname(__file__), 'static', 'images', dir_name, current_month)
+            save_path = str(os.path.join(os.path.dirname(__file__), 'static', 'images', dir_name, current_month))
             os.makedirs(save_path, exist_ok=True)
             current_date = datetime.now().strftime("%Y-%m-%d")
             i = 0

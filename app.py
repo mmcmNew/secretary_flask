@@ -3,7 +3,7 @@ import os
 import json
 import re
 from datetime import datetime
-
+from flask_sqlalchemy import SQLAlchemy
 import sqlite3
 import random
 
@@ -98,6 +98,7 @@ def memory():
     data = request.json
     request_type = data.get('type', None)
     params = data.get('params', None)
+    new_cards = {}
     if request_type == 'words':
         new_cards = generate_cards(cards_type=request_type, string_words=params)
     elif request_type == 'check':
@@ -154,7 +155,9 @@ def new_message():
     current_time = datetime.now().strftime("%H:%M")
     text = request.form.get('message')
     message_type = request.form.get('type')
-    tool_panel_div = None
+    component_div = ''
+    component_info = None
+    action_module = None
     # для первого запроса формируем вывод в чат
     if message_type == 'request':
         message = {'table_name': 'ChatHistory', 'user_id': 1, 'time': current_time, 'text': text, 'position': 'r'}
