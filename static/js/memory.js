@@ -105,7 +105,8 @@ $('#toolsPanel').on('click', '[id$=_checkText]', function() {
     // Подготовка параметров для запроса
     let requestData = {
         text: inputText,
-        userText: resultText
+        userText: resultText,
+        delimiter: $('#' + memoryId + '_delimiter').val() || ' ',
     };
 
     // AJAX-запрос на сервер для проверки результатов

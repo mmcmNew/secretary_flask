@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 	<head>
         <title>Секретарь</title>
 		{% include 'head.html' %}
@@ -7,7 +7,7 @@
 <body>
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-8">
+            <div class="col-9">
                 <nav>
                     <div class="nav nav-tabs" id="nav-tab" role="tablist">
                         {% for tab in tabs %}
@@ -22,6 +22,7 @@
                                 {{ tab.title }}
                             </button>
                         {% endfor %}
+                        <a href="/admin" class="btn btn-primary" tabindex="-1" role="button" aria-disabled="true" target="_blank">Админ панель</a>
                     </div>
                 </nav>
                 <div class="tab-content border border-1" id="{{ tabs[0].id }}_nav-tabContent">
@@ -47,7 +48,7 @@
                     </div>
                 </div>
             </div>
-            <div id="toolsPanel" class="col-4" hidden>
+            <div id="toolsPanel" class="col-3" hidden>
 
             </div>
         </div>

@@ -31,7 +31,7 @@
 				<button type="button" class="btn btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"></button>
 				<ul class="dropdown-menu">
 					{% for command in commands %}
-						<li class="dropdown-item quick-command"  data-command-id="{{ command.command }}">{{ command.name }}</li>
+						<li class="dropdown-item quick-command"  data-command-id="{{ command }}">{{ command }}</li>
 					{% endfor %}
 				</ul>
 			</div>

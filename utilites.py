@@ -49,12 +49,6 @@ command_num_information = {'bpm': ['частота', 'чистота'],
                            'interval': ['интервал'],
                            'count': ['количество']}
 
-buttons = ['timer start',
-           'timers stop',
-           'metronome start',
-           'metronome stop',
-           'memory start']
-
 
 def parse_time(text):
     print(text)
@@ -224,8 +218,6 @@ def save_to_base_modules(command):
 def save_to_base(message):
     table_name = message.get('table_name', '')
     try:
-        connection = sqlite3.connect('database.db')
-        cursor = connection.cursor()
         current_date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M")
         columns = []
@@ -253,7 +245,8 @@ def save_to_base(message):
                 print(e)
         # Формируем строку запроса
         query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join(['?' for _ in columns])})"
-
+        connection = sqlite3.connect('new_base.db')
+        cursor = connection.cursor()
         cursor.execute(query, tuple(values))
 
         # Сохранение изменений
@@ -269,12 +262,12 @@ def save_to_base(message):
 def append_to_base(message):
     table_name = message.get('table_name', None)
     try:
-        connection = sqlite3.connect('database.db')
-        cursor = connection.cursor()
         current_time = datetime.now().strftime("%H:%M")
         del message['table_name']
         if table_name is None or message == {}:
             return None, f'Уточните что нужно добавить в журнал'
+        connection = sqlite3.connect('new_base.db')
+        cursor = connection.cursor()
         cursor.execute(f"SELECT MAX(id) FROM {table_name}")
         last_row_id = cursor.fetchone()[0]
         update_parts = []

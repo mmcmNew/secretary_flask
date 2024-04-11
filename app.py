@@ -3,17 +3,38 @@ import os
 import json
 import re
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
-import sqlite3
+
 import random
 
 from flask import Flask, render_template, jsonify, request
+from flask_admin import Admin
+from models import *
+from admin import MyModelView
 
 from modules.geminiVPN import gemini_proxy_response
 from utilites import find_target_module, save_to_base, save_to_base_modules, find_info, generate_cards
 from text_to_edge_tts import tts
 
 app = Flask(__name__)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///F:/Projects/Python/jinja2/secretary/new_base.db'
+app.config['SECRET_KEY'] = 'my_secret'
+
+# Инициализация SQLAlchemy с текущим приложением
+db.init_app(app)
+
+# Инициализация Flask-Admin
+admin = Admin(app, name='Secretary', template_mode='bootstrap3')
+
+with app.app_context():
+    db.create_all()  # Создаём таблицы в базе данных
+    admin.add_view(MyModelView(User, db.session))
+    admin.add_view(MyModelView(ChatHistory, db.session))
+    admin.add_view(MyModelView(Diary, db.session))
+    admin.add_view(MyModelView(ProjectJournal, db.session))
+    admin.add_view(MyModelView(TradingJournal, db.session))
+    admin.add_view(MyModelView(BacktestJournal, db.session))
+    admin.add_view(MyModelView(Task, db.session))
 
 
 @app.route('/generate-tts', methods=['POST'])
@@ -31,60 +52,46 @@ def generate_tts():
     return jsonify(audioUrl=audio_path)
 
 
-@app.route('/tables')
-def list_tables():
-    connection = sqlite3.connect('database.db')
-    cursor = connection.cursor()
-    cursor.execute('SELECT name FROM sqlite_master WHERE type="table";')
-    tables = [row[0] for row in cursor.fetchall()]
-    connection.close()
-    return jsonify(list(tables))
-
-
-def get_users():
-    connection = sqlite3.connect('database.db')
-    cursor = connection.cursor()
-    cursor.execute('SELECT * FROM Users')
-    users = {}
-    for row in cursor.fetchall():
-        user_data = {'name': row[1],
-                     'avatar': row[2]}
-        users[row[0]] = user_data
-    connection.close()
-    return users
+@app.route('/users')
+def list_users():
+    users_list = User.query.all()
+    users = [user.to_dict() for user in users_list]
+    return jsonify(users)
 
 
 @app.route('/')
 def home():
-    connection = sqlite3.connect('database.db')
     tabs = [
         {'id': 'nav-home', 'title': 'Home'},
         {'id': 'nav-profile', 'title': 'Profile'},
         {'id': 'nav-contact', 'title': 'Contact'},
-        {'id': 'nav-disabled', 'title': 'Disabled'}
+        {'id': 'nav-disabled', 'title': 'Disabled'},
     ]
 
-    commands = [
-        {'name': 'Запустить таймер', 'command': 'timer start'},
-        {'name': 'Запустить метроном', 'command': 'timer metronome'}
-    ]
+    commands = ['Запустить таймер','Запустить метроном', 'Запусти память', 'Фокусировка', 'Расслабление', 'Демонстрация']
 
-    cursor = connection.cursor()
-    users = get_users()
-    cursor.execute('SELECT * FROM ChatHistory')
-    messages = []
-    for row in cursor.fetchall():
-        if row[0] is None:
+    # Загрузка всех сообщений и связанных пользователей из базы данных
+    messages = ChatHistory.query.join(ChatHistory.user).order_by(ChatHistory.message_id.desc()).limit(50).all()
+    messages = messages[::-1]
+    # Преобразование сообщений в формат, подходящий для передачи в шаблон
+    messages_data = []
+    for message in messages:
+        if message.message_id is None:
             continue
-        message_data = {'id': row[0], 'user_id': row[1], 'date': row[2], 'time': row[3], 'text': row[4],
-                        'image': row[5], 'position': row[6]}
+        message_data = {
+            'id': message.message_id,
+            'user_id': message.user_id,
+            'date': message.date.isoformat() if message.date else None,
+            'time': message.time,
+            'text': message.text,
+            'image': message.image,
+            'position': message.position,
+            'name': message.user.user_name,
+            'avatar': message.user.avatar_src,
+        }
+        messages_data.append(message_data)
 
-        message_data['name'] = users[message_data['user_id']]['name']
-        message_data['avatar'] = users[message_data['user_id']]['avatar']
-
-        messages.append(message_data)
-    connection.close()
-    html_content = render_template('index.html', tabs=tabs, messages=messages, commands=commands)
+    html_content = render_template('index.html', tabs=tabs, messages=messages_data, commands=commands)
     return html_content
 
 
@@ -117,14 +124,15 @@ def check_results():
     data = request.json
     original_text = data.get('text', '')
     user_text = data.get('userText', '')
+    delimiter = data.get('delimiter', ' ')
 
     # Удаление знаков препинания и приведение к нижнему регистру
-    cleaned_original_text = re.sub(r'[^\w\s]', '', original_text).lower()
-    cleaned_user_text = re.sub(r'[^\w\s]', '', user_text).lower()
+    cleaned_original_text = original_text.lower()
+    cleaned_user_text = user_text.lower()
 
     # Разделение строк на слова
-    original_words = cleaned_original_text.split()
-    user_words = cleaned_user_text.split()
+    original_words = cleaned_original_text.split(delimiter)
+    user_words = cleaned_user_text.split(',')
 
     # Сравнение слов по позициям и выделение неправильных
     result_words = []
@@ -160,14 +168,15 @@ def new_message():
     action_module = None
     # для первого запроса формируем вывод в чат
     if message_type == 'request':
-        message = {'table_name': 'ChatHistory', 'user_id': 1, 'time': current_time, 'text': text, 'position': 'r'}
+        message = {'table_name': 'chat_history', 'user_id': 1, 'time': current_time, 'text': text, 'position': 'r'}
         result = save_to_base(message)
         print(result)
         message['name'] = 'Me'
         message['avatar'] = 'me.png'
     else:
         # при повторном запросе отправляем его секретарю
-        users = get_users()
+        users_list = User.query.all()
+        users = [user.to_dict() for user in users_list]
         target_module, module_type = find_target_module(text)
         print(f'new_message: target_module: {target_module}')
         match module_type:
@@ -201,16 +210,17 @@ def new_message():
             case _:
                 ai_answer = {'user_id': 2, 'text': 'Уточните запрос'}
 
-        message = {'table_name': 'ChatHistory', 'user_id': ai_answer['user_id'],
+        message = {'table_name': 'chat_history', 'user_id': ai_answer['user_id'],
                    'time': current_time, 'text': ai_answer['text'], 'position': 'l'}
 
         result = save_to_base(message)
         print(result)
         div_time = datetime.now().strftime("%Y%m%d%H%M%S")
         random_id = random.randint(1000, 9999)
-
-        message['name'] = users[ai_answer['user_id']]['name']
-        message['avatar'] = users[ai_answer['user_id']]['avatar']
+        user_info = next((user for user in users if user['id'] == ai_answer['user_id']), None)
+        if user_info:
+            message['name'] = user_info['user_name']
+            message['avatar'] = user_info['avatar_src']
         message['id'] = f'{div_time}{random_id}'
 
     chat_message = render_template('message_template.html', message=message)
