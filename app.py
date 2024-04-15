@@ -1,7 +1,7 @@
 import glob
 import os
 import json
-import re
+
 from datetime import datetime
 
 import random
@@ -18,13 +18,14 @@ from text_to_edge_tts import tts
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///F:/Projects/Python/jinja2/secretary/new_base.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'my_secret'
 
 # Инициализация SQLAlchemy с текущим приложением
 db.init_app(app)
 
 # Инициализация Flask-Admin
-admin = Admin(app, name='Secretary', template_mode='bootstrap3')
+admin = Admin(app, name='Secretary', template_mode='bootstrap4')
 
 with app.app_context():
     db.create_all()  # Создаём таблицы в базе данных
@@ -63,12 +64,13 @@ def list_users():
 def home():
     tabs = [
         {'id': 'nav-home', 'title': 'Home'},
-        {'id': 'nav-profile', 'title': 'Profile'},
+        {'id': 'nav-ToDo', 'title': 'ToDo'},
         {'id': 'nav-contact', 'title': 'Contact'},
         {'id': 'nav-disabled', 'title': 'Disabled'},
     ]
 
-    commands = ['Запустить таймер','Запустить метроном', 'Запусти память', 'Фокусировка', 'Расслабление', 'Демонстрация']
+    commands = ['Запустить таймер', 'Запустить метроном', 'Запусти память', 'Фокусировка', 'Расслабление',
+                'Демонстрация']
 
     # Загрузка всех сообщений и связанных пользователей из базы данных
     messages = ChatHistory.query.join(ChatHistory.user).order_by(ChatHistory.message_id.desc()).limit(50).all()
@@ -84,20 +86,107 @@ def home():
             'date': message.date.isoformat() if message.date else None,
             'time': message.time,
             'text': message.text,
-            'image': message.image,
+            'image': message.files,
             'position': message.position,
             'name': message.user.user_name,
             'avatar': message.user.avatar_src,
         }
         messages_data.append(message_data)
 
-    html_content = render_template('index.html', tabs=tabs, messages=messages_data, commands=commands)
+    html_content = render_template('index.html', tabs=tabs, messages=messages_data, commands=commands,
+                                   to_do_groups=list_groups())
     return html_content
+
+
+def list_groups():
+    # Получаем все группы
+    tasks_groups = Group.query.all()
+
+    # Получаем списки, которые не принадлежат ни к одной группе
+    ungrouped_lists = List.query.filter(~List.groups.any()).all()
+
+    # Преобразуем данные в список словарей для передачи в шаблон
+    group_data = []
+    for group in tasks_groups:
+        group_data.append({
+            'group_id': group.id,
+            'group_name': group.name,
+            # Для каждого списка подсчитываем количество задач
+            'lists': [
+                {'list_id': lst.id, 'list_name': lst.name, 'task_count': len(lst.tasks)}
+                for lst in group.lists
+            ]
+        })
+
+    # Также подсчитываем задачи для негруппированных списков
+    ungrouped_data = [
+        {'list_id': lst.id, 'list_name': lst.name, 'task_count': len(lst.tasks)}
+        for lst in ungrouped_lists
+    ]
+
+    # Объединяем данные в один словарь для удобства передачи в шаблон
+    to_do_groups = {
+        'my_day_count': 5,
+        'tasks_count': 10,
+        'groups': group_data,
+        'ungrouped_lists': ungrouped_data
+    }
+
+    print(f'list_groups: {to_do_groups}')
+    return to_do_groups
+
+
+@app.route('/get_tasks')
+def get_tasks():
+    list_id = request.args.get('list_id', 'default')
+    # если id списка my_day, tasks или default, то получаем все задачи не входящие ни в один список
+    if list_id in ['tasks', 'default', 'my_day']:
+        tasks = Task.query.filter(~Task.lists.any()).all()
+    else:
+        tasks = Task.query.filter_by(list_id=list_id).all()  # Пример запроса, адаптируйте под вашу логику
+    # для каждой задчи проверяется есть ли задачи связанные с ней (подзадачи)
+    for task in tasks:
+        task.subtasks = Task.query.filter_by(parent_id=task.id).all()
+        task.subtask_count = len(task.subtasks)
+
+    # Рендеринг задач в HTML
+    tasks_html = render_template('tasks.html', tasks=tasks)
+    return jsonify({'html': tasks_html})
+
+
+@app.route('/add_object', methods=['POST'])
+def add_object():
+    object_name = request.form['name']
+    object_type = request.form['type']
+
+    if object_type == 'list':
+        new_object = List(name=object_name)
+    elif object_type == 'group':
+        new_object = Group(name=object_name)
+    elif object_type == 'task':
+        new_object = Task(title=object_name)
+    else:
+        return jsonify({'success': False, 'message': 'Неизвестный тип объекта'})
+
+    db.session.add(new_object)
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Объект добавлен'})
+
+
+@app.route('/get_groups')
+def get_groups():
+    # Вернуть HTML для обновления списка групп
+    groups_data = list_groups()  # Предполагаем, что list_groups возвращает словарь с данными
+    rendered_html = render_template('to_do/groups.html', to_do_groups=groups_data)
+    return jsonify({'html': rendered_html})
 
 
 @app.route('/test')
 def test():
-    return render_template('test.html')
+    data = list_groups()
+    # Рендеринг HTML шаблона с данными
+    return render_template('ToDoList.html', to_do_groups=data)
 
 
 @app.route('/memory', methods=['POST'])
@@ -122,17 +211,22 @@ def memory():
 @app.route('/check_results', methods=['POST'])
 def check_results():
     data = request.json
+
     original_text = data.get('text', '')
     user_text = data.get('userText', '')
-    delimiter = data.get('delimiter', ' ')
 
-    # Удаление знаков препинания и приведение к нижнему регистру
-    cleaned_original_text = original_text.lower()
-    cleaned_user_text = user_text.lower()
+    # удаляем знаки препинания, чтоб сравнивать по словам
+    punctuation_to_remove = ".,;:!?()[]{}"
 
-    # Разделение строк на слова
-    original_words = cleaned_original_text.split(delimiter)
-    user_words = cleaned_user_text.split(',')
+    # Таблица перевода для удаления выбранных знаков препинания
+    translation_table = str.maketrans('', '', punctuation_to_remove)
+
+    cleaned_original_text = original_text.translate(translation_table).lower()
+    cleaned_user_text = user_text.translate(translation_table).lower()
+
+    # Разделение строк на слова по пробелам
+    original_words = cleaned_original_text.split()
+    user_words = cleaned_user_text.split()
 
     # Сравнение слов по позициям и выделение неправильных
     result_words = []

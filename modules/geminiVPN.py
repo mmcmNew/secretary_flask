@@ -9,9 +9,9 @@ def load_settings():
     # proxy_type = 'https'
     # proxy_host = "208.196.136.141"
     # proxy_port = 3128
-    proxy_type = 'https'
-    proxy_host = "150.136.153.231"
-    proxy_port = 80
+    proxy_type = 'socks5'
+    proxy_host = "168.138.66.48"
+    proxy_port = 1080
     # proxy_type = 'socks5'
     # proxy_host = "162.241.45.22"
     # proxy_port = 36213

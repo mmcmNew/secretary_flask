@@ -18,7 +18,7 @@ modules = {
                          'info': ['trading_day', 'bias', 'news', 'session', 'model', 'reason', 'result', 'comment'],
                          'type': 'journal'},
     'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
-              'info': ['reason', 'result', 'lessons', 'comment'], 'type': 'journal'},
+              'info': ['reason', 'score', 'lessons', 'comment'], 'type': 'journal'},
     'project_journal': {'words': ['разработ'], 'commands_list': ['create', 'append', 'edit', 'del'],
                         'info': ['project_name', 'step', 'comment'], 'type': 'journal'},
     'productivity': {'words': ['фокусир'], 'commands_list': ['start', 'stop'], 'type': 'action_module'},
@@ -43,7 +43,8 @@ command_information = {'name': ['назван', 'назови', 'напомни'
                        'comment': ['коммент'],
                        'lessons': ['урок'],
                        'project_name': ['проект'],
-                       'step': ['этап']}
+                       'step': ['этап'],
+                       'score': ['оценк']}
 
 command_num_information = {'bpm': ['частота', 'чистота'],
                            'interval': ['интервал'],
@@ -186,44 +187,53 @@ def save_to_base_modules(command):
     module_name = command.get('target_module', None)
     command_text = command.get('text', None)
     files_list = command.get('files', None)
+    save_files_result = None
+    command_info = {}
     if module_name is None:
         return None
     # Получаем тип команды
     command_type = find_command_type(module_name, command_text)
-    print(f'save_to_base: command_type: {command_type}')
+    print(f'save_to_base_modules: command_type: {command_type}')
+    if files_list:
+        save_files_result, files_names = save_files({'files_list': files_list, 'dir_name': module_name})
+        if files_names:
+            command_info['files'] = ''
+            for file_name in files_names:
+                command_info['files'] += file_name + ';'
+    print(f'save_to_base_modules: command_info: {command_info}')
+
     match command_type:
         case 'create':
-            command_info = find_info(module_name, command_text)
+            command_info.update(find_info(module_name, command_text))
+            # command_info = check_keys_in_message(command_info)
             command_info['table_name'] = module_name
             save_result = save_to_base(command_info)
             result = save_result
-            if files_list:
-                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
-                result += f'{save_result}'
 
         case 'append':
-            command_info = find_info(module_name, command_text)
+            command_info.update(find_info(module_name, command_text))
+            # command_info = check_keys_in_message(command_info)
             command_info['table_name'] = module_name
             save_result = append_to_base(command_info)
             result = save_result
-            if files_list:
-                save_result = save_files({'files_list': files_list, 'dir_name': module_name})
-                result += f'{save_result}'
         case _:
-            return {'text': f'Команда {command_text} не обработана'}
+            return {'text': f'save_to_base_modules: Команда {command_text} не обработана'}
 
+    if save_files_result:
+        result += f' {save_files_result}'
     return {'text': result}
 
 
 def save_to_base(message):
     table_name = message.get('table_name', '')
+    print(f'save_to_base: message: {message}')
+    if table_name:
+        del message['table_name']
     try:
         current_date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M")
         columns = []
         values = []
-        print(f'save_to_base: message: {message}')
-        del message['table_name']
         if table_name == 'trading_journal':
             message['date'] = current_date
             trading_day = message.get('trading_day', current_date)
@@ -233,7 +243,8 @@ def save_to_base(message):
             message['date'] = current_date
             message['time'] = current_time
             # Собираем названия столбцов и их значения из словаря message
-        print(message)
+
+        print(f'save_to_base: message: {message}')
         for key, value in message.items():
             try:
                 columns.append(key)
@@ -261,13 +272,17 @@ def save_to_base(message):
 
 def append_to_base(message):
     table_name = message.get('table_name', None)
+    print(f'append_to_base: message: {message}')
+    if table_name:
+        del message['table_name']
     try:
         current_time = datetime.now().strftime("%H:%M")
-        del message['table_name']
         if table_name is None or message == {}:
-            return None, f'Уточните что нужно добавить в журнал'
+            return f'Уточните что нужно добавить в журнал'
+
         connection = sqlite3.connect('new_base.db')
         cursor = connection.cursor()
+        print(f'append_to_base: message: {message}')
         cursor.execute(f"SELECT MAX(id) FROM {table_name}")
         last_row_id = cursor.fetchone()[0]
         update_parts = []
@@ -300,21 +315,40 @@ def append_to_base(message):
         return result
 
 
+def check_keys_in_message(message):
+    table_name = message.get('table_name', None)
+    connection = sqlite3.connect('new_base.db')
+    cursor = connection.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns_info = cursor.fetchall()
+    connection.close()
+
+    # Определение столбцов, присутствующих в таблице
+    columns_names = [column[1] for column in columns_info]
+    keys_to_remove = [key for key in message if key not in columns_names]
+
+    # Удаление неподходящих ключей
+    for key in keys_to_remove:
+        del message[key]
+        print(f'Удален ключ {key} из словаря message т.к. его нет в базе')
+
+    return message
+
+
 def save_files(files):
     try:
         files_list = files.get('files_list', None)
         dir_name = files.get('dir_name', None)
         print(f'save_files: files_list: {files_list}, dir_name: {dir_name}')
+        files_names = []
         if files_list is None or dir_name is None:
             return 'Не получены файлы для загрузки'
-        print(f'save_files: files_list: {files_list}, dir_name: {dir_name}')
         if files_list:
-            current_month = datetime.now().strftime('%m')
+            current_month = datetime.now().strftime('%Y-%m')
             save_path = str(os.path.join(os.path.dirname(__file__), 'static', 'images', dir_name, current_month))
             os.makedirs(save_path, exist_ok=True)
             current_date = datetime.now().strftime("%Y-%m-%d")
             i = 0
-            print(f'load_modules: files_list: {files_list}')
             for file_key in files_list:
                 file = files_list[file_key]
                 if file.filename == '':
@@ -326,12 +360,14 @@ def save_files(files):
                     save_file_name = f'{current_date}[{i}]{file_extension}'
 
                 file.save(os.path.join(save_path, save_file_name))
+                files_names.append(os.path.join(dir_name, current_month, save_file_name))
                 i += 1
+        print(f'save_files: files_names: {files_names}')
         result = 'Файлы загружены. '
-        return result
+        return result,  files_names
     except Exception as e:
         result = f'Файлы не загружены: {e}. '
-        return result
+        return result, files_names
 
 
 if __name__ != '__main__':

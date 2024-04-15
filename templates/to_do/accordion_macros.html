@@ -1,0 +1,26 @@
+{% macro render_accordion(item, level=0) %}
+<div class="accordion-item">
+    <h2 class="accordion-header task-item" id="heading{{ item.id }}">
+        <button class="accordion-button btn-sm collapsed w-100" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapse{{ item.id }}"
+                aria-expanded="false" aria-controls="collapse{{ item.id }}">
+            <span class="text-truncate">{{ item.name }}</span>
+        </button>
+    </h2>
+    <div id="collapse{{ item.id }}" class="accordion-collapse collapse"
+         aria-labelledby="heading{{ item.id }}">
+        <div class="list-group">
+            {% for subitem in item.children %}
+                {% if subitem.type == 'accordion' %}
+                    {{ render_accordion(subitem, level + 1) }}
+                {% else %}
+                    <a href="#" class="list-group-item list-group-item-action task-item">
+                        {{ subitem.name }}
+                        <span class="badge bg-primary rounded-pill">{{ subitem.count }}</span>
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endmacro %}

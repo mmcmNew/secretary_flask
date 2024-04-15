@@ -1,65 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Table, Column, Integer, ForeignKey
+
 
 db = SQLAlchemy()
-
-
-class Status(db.Model):
-    __tablename__ = 'statuses'
-    StatusID = db.Column(db.Integer, primary_key=True)
-    StatusName = db.Column(db.String(255))
-
-
-# Модель для таблицы Intervals
-class Interval(db.Model):
-    __tablename__ = 'intervals'
-    IntervalID = db.Column(db.Integer, primary_key=True)
-    IntervalCount = db.Column(db.Integer)
-
-
-# Модель для таблицы Priority
-class Priority(db.Model):
-    __tablename__ = 'priority'
-    PriorityID = db.Column(db.Integer, primary_key=True)
-    PriorityName = db.Column(db.String(255))
-
-
-# Модель для таблицы Lists
-class List(db.Model):
-    __tablename__ = 'lists'
-    ListID = db.Column(db.Integer, primary_key=True)
-    ListName = db.Column(db.String(255))
-    PriorityID = db.Column(db.Integer, db.ForeignKey('Priority.PriorityID'))
-    StatusID = db.Column(db.Integer, db.ForeignKey('Statuses.StatusID'))
-    isProject = db.Column(db.Boolean)
-    DueDate = db.Column(db.Date)
-
-
-# Модель для таблицы Groups
-class Group(db.Model):
-    __tablename__ = 'groups'
-    GroupID = db.Column(db.Integer, primary_key=True)
-    GroupName = db.Column(db.String(255))
-    ListID = db.Column(db.Integer, db.ForeignKey('Lists.ListID'))
-    StatusID = db.Column(db.Integer, db.ForeignKey('Statuses.StatusID'))
-    PriorityID = db.Column(db.Integer, db.ForeignKey('Priority.PriorityID'))
-
-
-# Модель для таблицы Tasks
-class Task(db.Model):
-    __tablename__ = 'tasks'
-    TaskID = db.Column(db.Integer, primary_key=True)
-    Level = db.Column(db.Integer)
-    Title = db.Column(db.String(255))
-    Descriptions = db.Column(db.Text)
-    DueDate = db.Column(db.Date)
-    DueTime = db.Column(db.Time)
-    Attachments = db.Column(db.LargeBinary)
-    Notes = db.Column(db.Text)
-    PriorityID = db.Column(db.Integer, db.ForeignKey('Priority.PriorityID'))
-    StatusID = db.Column(db.Integer, db.ForeignKey('Statuses.StatusID'))
-    ListID = db.Column(db.Integer, db.ForeignKey('Lists.ListID'))
-    GroupID = db.Column(db.Integer, db.ForeignKey('Groups.GroupID'))
-    IntervalID = db.Column(db.Integer, db.ForeignKey('Intervals.IntervalID'))
 
 
 # Модель для таблицы Users
@@ -85,7 +28,7 @@ class ChatHistory(db.Model):
     date = db.Column(db.Date)
     time = db.Column(db.Text)
     text = db.Column(db.Text)
-    image = db.Column(db.Text)
+    files = db.Column(db.Text)
     position = db.Column(db.Text)
     user = db.relationship('User', backref=db.backref('messages', lazy=True))
 
@@ -106,19 +49,6 @@ class Video(db.Model):
     GroupIDs = db.Column(db.String(255))  # Аналогично для GroupIDs
 
 
-# Модель для таблицы Plan
-class Plan(db.Model):
-    __tablename__ = 'plan'
-    PlanID = db.Column(db.Integer, primary_key=True)
-    PlanDate = db.Column(db.Date)
-    TasksIDs = db.Column(db.String(255))  # Предполагается, что это строка с ID задач
-    SubTaskIDs = db.Column(db.String(255))  # Аналогично для SubTaskIDs
-    CompletedTasksIDs = db.Column(db.String(255))  # ID завершенных задач
-    CompletedSubTasksIDs = db.Column(db.String(255))  # ID завершенных подзадач
-
-
-# Модель для таблицы ChatHistory уже определена, поэтому перейдем к следующим
-
 # Модель для таблицы trading_journal
 class TradingJournal(db.Model):
     __tablename__ = 'trading_journal'
@@ -133,7 +63,7 @@ class TradingJournal(db.Model):
     reason = db.Column(db.Text)
     result = db.Column(db.Text, default="0")
     comment = db.Column(db.Text)
-    screenshots = db.Column(db.Text)  # Путь к скриншотам или URL
+    files = db.Column(db.Text)
 
 
 # Модель для таблицы diary
@@ -145,8 +75,9 @@ class Diary(db.Model):
     bias = db.Column(db.Text)
     reason = db.Column(db.Text)
     lessons = db.Column(db.Text)
-    result = db.Column(db.Text)
+    score = db.Column(db.Text)
     comment = db.Column(db.Text)
+    files = db.Column(db.Text)
 
 
 # Модель для таблицы project_journal
@@ -158,6 +89,7 @@ class ProjectJournal(db.Model):
     project_name = db.Column(db.Text)
     step = db.Column(db.Text)
     comment = db.Column(db.Text)
+    files = db.Column(db.Text)
 
 
 # Модель для таблицы backtest_journal
@@ -174,3 +106,93 @@ class BacktestJournal(db.Model):
     reason = db.Column(db.Text)
     result = db.Column(db.Text, default="0")
     comment = db.Column(db.Text)
+    files = db.Column(db.Text)
+
+
+# ToDoBase
+
+class Project(db.Model):
+    __tablename__ = 'projects'
+    id = db.Column('ProjectID', db.Integer, primary_key=True)
+    name = db.Column('ProjectName', db.String(255))
+
+
+class Task(db.Model):
+    __tablename__ = 'tasks'
+    id = db.Column('TaskID', db.Integer, primary_key=True)
+    title = db.Column('Title', db.String(255))
+    description = db.Column('Description', db.Text)
+    due_date = db.Column('DueDate', db.Date)
+    status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'))
+    priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
+    interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
+
+
+class List(db.Model):
+    __tablename__ = 'lists'
+    id = db.Column('ListID', db.Integer, primary_key=True)
+    name = db.Column('ListName', db.String(255))
+
+
+class Status(db.Model):
+    __tablename__ = 'statuses'
+    id = db.Column('StatusID', db.Integer, primary_key=True)
+    name = db.Column('StatusName', db.String(255))
+
+
+class Priority(db.Model):
+    __tablename__ = 'priorities'
+    id = db.Column('PriorityID', db.Integer, primary_key=True)
+    name = db.Column('PriorityName', db.String(255))
+
+
+class Interval(db.Model):
+    __tablename__ = 'intervals'
+    id = db.Column('IntervalID', db.Integer, primary_key=True)
+    minutes = db.Column('IntervalMinutes', db.Integer)
+
+
+class Group(db.Model):
+    __tablename__ = 'groups'
+    id = db.Column('GroupID', db.Integer, primary_key=True)
+    name = db.Column('GroupName', db.String(255))
+
+
+# Вспомогательная таблица для связи между задачами и проектами
+task_project_relations = Table('task_project_relations', db.Model.metadata,
+    Column('TaskID', Integer, ForeignKey('tasks.TaskID'), primary_key=True),
+    Column('ProjectID', Integer, ForeignKey('projects.ProjectID'), primary_key=True)
+)
+
+# Вспомогательная таблица для связи между списками и проектами
+list_project_relations = Table('list_project_relations', db.Model.metadata,
+    Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True),
+    Column('ProjectID', Integer, ForeignKey('projects.ProjectID'), primary_key=True)
+)
+
+# Вспомогательная таблица для связи между задачами и списками
+task_list_relations = Table('task_list_relations', db.Model.metadata,
+    Column('TaskID', Integer, ForeignKey('tasks.TaskID'), primary_key=True),
+    Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True)
+)
+
+# Вспомогательная таблица для связи между списками и группами
+list_group_relations = Table('list_group_relations', db.Model.metadata,
+    Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True),
+    Column('GroupID', Integer, ForeignKey('groups.GroupID'), primary_key=True)
+)
+
+# Установка связей многие-ко-многим
+Project.tasks = db.relationship('Task', secondary='task_project_relations', back_populates='projects')
+Project.lists = db.relationship('List', secondary='list_project_relations', back_populates='projects')
+Task.projects = db.relationship('Project', secondary='task_project_relations', back_populates='tasks')
+Task.lists = db.relationship('List', secondary='task_list_relations', back_populates='tasks')
+List.tasks = db.relationship('Task', secondary='task_list_relations', back_populates='lists')
+List.projects = db.relationship('Project', secondary='list_project_relations', back_populates='lists')
+List.groups = db.relationship('Group', secondary='list_group_relations', back_populates='lists')
+Group.lists = db.relationship('List', secondary='list_group_relations', back_populates='groups')
+
+# Установка связей один-ко-многим
+Status.tasks = db.relationship('Task', backref='status')
+Priority.tasks = db.relationship('Task', backref='priority')
+Interval.tasks = db.relationship('Task', backref='interval')
