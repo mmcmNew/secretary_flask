@@ -1,8 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Table, Column, Integer, ForeignKey
-
+from sqlalchemy import Table, Column, Integer, ForeignKey, MetaData
 
 db = SQLAlchemy()
+metadata = MetaData()
 
 
 # Модель для таблицы Users
@@ -123,6 +123,7 @@ class Task(db.Model):
     title = db.Column('Title', db.String(255))
     description = db.Column('Description', db.Text)
     due_date = db.Column('DueDate', db.Date)
+    task_type = db.Column('Type', db.String(255))
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'))
     priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
     interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
@@ -158,31 +159,43 @@ class Group(db.Model):
     name = db.Column('GroupName', db.String(255))
 
 
+# Вспомогательная таблица для связи между задачами и подзадачами
+task_subtasks_relations = Table('task_subtasks_relations', db.Model.metadata,
+                                Column('TaskID', Integer, ForeignKey('tasks.TaskID')),
+                                Column('SubtaskID', Integer, ForeignKey('tasks.TaskID'))
+                                )
+
 # Вспомогательная таблица для связи между задачами и проектами
 task_project_relations = Table('task_project_relations', db.Model.metadata,
-    Column('TaskID', Integer, ForeignKey('tasks.TaskID'), primary_key=True),
-    Column('ProjectID', Integer, ForeignKey('projects.ProjectID'), primary_key=True)
-)
+                               Column('TaskID', Integer, ForeignKey('tasks.TaskID'), primary_key=True),
+                               Column('ProjectID', Integer, ForeignKey('projects.ProjectID'), primary_key=True)
+                               )
 
 # Вспомогательная таблица для связи между списками и проектами
 list_project_relations = Table('list_project_relations', db.Model.metadata,
-    Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True),
-    Column('ProjectID', Integer, ForeignKey('projects.ProjectID'), primary_key=True)
-)
+                               Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True),
+                               Column('ProjectID', Integer, ForeignKey('projects.ProjectID'), primary_key=True)
+                               )
 
 # Вспомогательная таблица для связи между задачами и списками
 task_list_relations = Table('task_list_relations', db.Model.metadata,
-    Column('TaskID', Integer, ForeignKey('tasks.TaskID'), primary_key=True),
-    Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True)
-)
+                            Column('TaskID', Integer, ForeignKey('tasks.TaskID'), primary_key=True),
+                            Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True)
+                            )
 
 # Вспомогательная таблица для связи между списками и группами
 list_group_relations = Table('list_group_relations', db.Model.metadata,
-    Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True),
-    Column('GroupID', Integer, ForeignKey('groups.GroupID'), primary_key=True)
-)
+                             Column('ListID', Integer, ForeignKey('lists.ListID'), primary_key=True),
+                             Column('GroupID', Integer, ForeignKey('groups.GroupID'), primary_key=True)
+                             )
 
 # Установка связей многие-ко-многим
+Task.subtasks = db.relationship('Task',
+                                secondary='task_subtasks_relations',
+                                primaryjoin='Task.id == task_subtasks_relations.c.TaskID',
+                                secondaryjoin='Task.id == task_subtasks_relations.c.SubtaskID',
+                                foreign_keys=[task_subtasks_relations.c.TaskID, task_subtasks_relations.c.SubtaskID],
+                                backref="parent_tasks")
 Project.tasks = db.relationship('Task', secondary='task_project_relations', back_populates='projects')
 Project.lists = db.relationship('List', secondary='list_project_relations', back_populates='projects')
 Task.projects = db.relationship('Project', secondary='task_project_relations', back_populates='tasks')

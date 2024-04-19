@@ -2,16 +2,20 @@ $(document).ready(function() {
     $('.to-do').click(function () {
         let buttonId = this.id;  // Получаем ID кнопки
         let objectName = $('#input-group-name').val(); // Получаем имя объекта
-        let objectType = buttonId.split('_')[1];  // Определяем тип объекта: list, group, task
+        //прерываем если имени объекта нет
+        if (!objectName) {
+            return;
+        }
+
+        let objectType = buttonId.split('_')[1];  // Определяем тип объекта: list, group
         $('#input-group_name').val(''); // Очищаем поле ввода имени объекта
 
         if (objectName) {
-            $.post('/add_object', {name: objectName, type: objectType}, function (response) {
+            $.post('/add_list', {name: objectName, type: objectType}, function (response) {
                 if (response.success) {
-                    $.get('/get_groups', function(data) {
+                    $.get('/get_groups', function (data) {
                         $('#groupsContainer').html(data.html);
                     });
-                    initEventListeners();
                 } else {
                     alert('Ошибка: ' + response.message);
                 }
@@ -21,16 +25,21 @@ $(document).ready(function() {
 
     $('#button-add-task').click(function () {
         let taskTitle = $('#input-task-title').val(); // Получаем название задачи
+        //проверяем что имя не пустое
+        if (!taskTitle) {
+            return;
+        }
         $('#input-task-title').val(''); // Очищаем поле ввода
-        // ID списка по активному элементу в groupsContainer
-        let list_id = $('.list-group-link.active').data('id') || 'default';
+        let listFullId = $('#groupsContainer .list-group-item.active').attr('id'); // Получаем ID активного списка
+        let listId = $('#groupsContainer .list-group-item.active').attr('id').split('_')[0] || 'tasks';
 
         if (taskTitle) {
-            $.post('/add_task', {title: taskTitle, list_id: list_id}, function (response) {
+            $.post('/add_task', {title: taskTitle, list_id: listId}, function (response) {
                 if (response.success) {
-                    $.get('/get_tasks', {list_id: list_id}, function(data) { // Передаём list_id
-                        $('#tasksContainer').html(data.html);
-                        initEventListeners();  // Обновление слушателей после изменения DOM
+                    $.get('/get_groups', function (data) {
+                        $('#groupsContainer').html(data.html);
+                        $('#' + listFullId).click(); // Инициируем клик по элементу
+                        $('#' + listFullId).addClass('active'); // Добавляем класс 'active' // Активируем элемент после загрузки данных
                     });
                 } else {
                     alert('Ошибка: ' + response.message);
@@ -38,56 +47,67 @@ $(document).ready(function() {
             });
         }
     });
-});
 
+    // Добавляем обработчик кликов на родительский контейнер всех списков
+    $('#groupsContainer').on('click', '.list-group-item', function () {
+        // Убираем класс 'active' у всех элементов списка
+        $('#groupsContainer .list-group-item').removeClass('active');
+        // Добавляем класс 'active' к элементу, по которому был произведен клик
+        $(this).addClass('active');
 
-
-document.addEventListener('DOMContentLoaded', function() {
-    var links = document.querySelectorAll('.list-group-link');
-    links.forEach(link => {
-        link.addEventListener('click', function() {
-            links.forEach(lnk => lnk.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    var listItems = document.querySelectorAll('.task-item');
-    listItems.forEach(function(item) {
-        item.addEventListener('click', function() {
-            listItems.forEach(function(innerItem) {
-                innerItem.classList.remove('active');
-            });
-            this.classList.add('active');
-        });
-    });
-});
-
-
-// Функция инициализации выбранных элементов после обновления содержимого
-function initEventListeners() {
-    var links = document.querySelectorAll('.list-group-link');
-    links.forEach(link => {
-        link.addEventListener('click', function() {
-            links.forEach(lnk => lnk.classList.remove('active'));
-            this.classList.add('active');
+        // Загрузка данных или выполнение других действий
+        let listId = $(this).attr('id').split('_')[0];
+        $.get('/get_tasks', {list_id: listId}, function (data) {
+            $('#tasksContainer').html(data.html);
         });
     });
 
-    var listItems = document.querySelectorAll('.task-item');
-    listItems.forEach(function(item) {
-        item.addEventListener('click', function() {
-            listItems.forEach(function(innerItem) {
-                innerItem.classList.remove('active');
-            });
-            this.classList.add('active');
+
+    // Добавляем обработчик кликов на родительский контейнер всех списков
+    $('#tasksContainer').on('click', '.list-group-item', function () {
+        // Убираем класс 'active' у всех элементов списка
+        $('#tasksContainer .list-group-item').removeClass('active');
+        // Добавляем класс 'active' к элементу, по которому был произведен клик
+        $(this).addClass('active');
+
+        let taskId = $(this).attr('id').split('_')[0];
+        $.get('/get_tasks_edit', {task_id: taskId}, function (data) {
+            $('#editContainer').html(data.html);
         });
     });
-}
 
-document.addEventListener('DOMContentLoaded', function() {
-    initEventListeners(); // Инициализируем слушателей при загрузке страницы
+    $('#editContainer').on('click', '#button-add-subtask', function () {
+        let subTaskTitle = $('#input-subtask-title').val(); // Получаем название задачи
+        if (!subTaskTitle) {
+            return;
+        }
+        $('#input-subtask-title').val(''); // Очищаем поле ввода
+        let taskId = $('#button-add-subtask').attr('name');
+        //получить id нажатого элемента
+        let taskElement = $('#tasksContainer .list-group-item.active');
+        //получить id родительского элемента
+        taskElementId = taskElement.attr('id').replace('_task', '');
+        let taskDiv = $('#' + taskElementId + '_taskDiv');
+
+        $.post('/add_task', {title: subTaskTitle, task_id: taskId}, function (response) {
+            if (response.success) {
+                let newTaskElement = $(response.div);
+                taskDiv.replaceWith(newTaskElement)
+                taskElement = $('#' + newTaskElement.attr('id').replace('Div', ''));
+                taskElement.click(); // Инициируем клик по элементу
+                taskElement.addClass('active'); // Добавляем класс 'active'
+                // для каждого элемента с name taskId внутри контейнера tasksContainer заменить на response.div
+                $('#tasksContainer').each(function () {
+                    if ($(this).attr('name') === taskId) {
+                        $(this).replaceWith(newTaskElement);
+                    }
+                });
+            }
+        });
+
+    });
 });
+
+
 
 

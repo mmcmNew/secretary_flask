@@ -4,7 +4,7 @@
 	        <div id="groupsContainer" class="w-100">
 				{% include 'to_do/groups.html' %}
 	        </div>
-            <div class="input-group mb-3 position-absolute bottom-0 start-0 end-0">
+            <div class="input-group p-2 mb-3 position-absolute bottom-0 start-0 end-0">
 	            <button class="btn btn-outline-secondary btn-sm to-do" type="button" id="button-add_group">
 					<i class="bi bi-collection-fill"></i>
 				</button>
@@ -15,14 +15,14 @@
 			</div>
         </div>
 		<div class="col-5 position-relative p-2" style="height: 90vh;">
-			<div id="tasksContainer">
+			<div id="tasksContainer" class="list-group chat-messages border border-1 pe-1" style="height: 80vh;">
 				{% include 'to_do/tasks.html' %}
 			</div>
-			<div class="input-group m-3 position-absolute bottom-0 start-0 end-0">
+			<div class="input-group p-2 mb-3 position-absolute bottom-0 start-0 end-0">
 				<button class="btn btn-outline-secondary btn-sm to" type="button" id="button-add-task">
 					<i class="bi bi-plus"></i>
 				</button>
-				<input id="input-task-title" type="text" class="form-control" placeholder="Добавить задачу" aria-label="Example text with button addon" aria-describedby="button-addon1">
+				<input id="input-task-title" type="text"  class="form-control" placeholder="Добавить задачу" aria-label="Example text with button addon" aria-describedby="button-addon1">
 			</div>
 		</div>
 		<div id="editContainer" class="col-4 p-2" >

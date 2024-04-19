@@ -1,7 +1,7 @@
 <div class="list-group">
-    <a id="my_day" href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center list-group-link">
+    <a id="myday" href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center list-group-link">
         Мой день
-        <span class="badge bg-primary rounded-pill">{{ to_do_groups.my_day_count }}</span>
+        <span class="badge bg-primary rounded-pill">{{ to_do_groups.myday_count }}</span>
     </a>
     <a id="tasks" href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center list-group-link active">
         Задачи
@@ -15,7 +15,7 @@
 <!-- Вывод групп в виде аккордеонов -->
 <div class="accordion">
     {% for group in to_do_groups.groups %}
-    <div class="accordion-item">
+    <div class="accordion-item border-bottom-1">
         <h2 class="accordion-header" id="heading{{ group.group_id }}">
             <button class="accordion-button btn-sm p-2 collapsed w-100" type="button"
                     data-bs-toggle="collapse" data-bs-target="#collapse{{ group.group_id }}"
@@ -25,10 +25,10 @@
         </h2>
         <div id="collapse{{ group.group_id }}" class="accordion-collapse collapse"
              aria-labelledby="heading{{ group.group_id }}">
-            <div class="list-group">
+            <div class="list-group rounded-top-0 border-0">
                 {% for lst in group.lists %}
-                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center w-100 list-group-link">
-                    <span class="d-inline-block text-truncate" style="font-size: 0.8em;">{{ lst.list_name }}</span>
+                <a id="{{ lst.id }}" href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center w-100 list-group-link">
+                    <span class="d-inline-block text-truncate" style="font-size: 0.8em;">{{ lst.name }}</span>
                     <span class="badge bg-primary rounded-pill">{{ lst.task_count }}</span>
                 </a>
                 {% endfor %}
@@ -41,8 +41,8 @@
 <!-- Вывод списков без групп -->
 <div class="list-group">
     {% for lst in to_do_groups.ungrouped_lists %}
-    <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center list-group-link">
-        {{ lst.list_name }}
+    <a id="{{ lst.id }}" href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center list-group-link">
+        {{ lst.name }}
         <span class="badge bg-primary rounded-pill">{{ lst.task_count }}</span>
     </a>
     {% endfor %}

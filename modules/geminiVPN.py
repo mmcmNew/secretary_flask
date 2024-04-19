@@ -7,11 +7,11 @@ import google.generativeai as genai
 def load_settings():
     # Настройка прокси-сервера
     # proxy_type = 'https'
-    # proxy_host = "208.196.136.141"
-    # proxy_port = 3128
-    proxy_type = 'socks5'
-    proxy_host = "168.138.66.48"
-    proxy_port = 1080
+    proxy_host = "165.22.36.164"
+    proxy_port = 10006
+    proxy_type = 'https'
+    # proxy_host = "69.75.143.13"
+    # proxy_port = 80
     # proxy_type = 'socks5'
     # proxy_host = "162.241.45.22"
     # proxy_port = 36213

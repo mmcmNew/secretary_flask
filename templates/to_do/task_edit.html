@@ -1,3 +1,49 @@
-<div class="list-group my-2">
-	<textarea class="form-control" rows="3" placeholder="Название">Название задачи</textarea>
+{% if task %}
+<div id="task-subtasks" class="list-group">
+	<textarea id="{{ task.id }}_editor-task-title" class="form-control mb-2" rows="1" placeholder="Название">{{ task.title }}</textarea>
+	{% if task.subtasks %}
+	{% for subtask in task.subtasks %}
+		<div class="input-group input-group-sm border-bottom">
+		    <div class="input-group-text border border-0">
+		        <input id="{{ subtask.id }}_editor-task-complete" class="form-check-input mt-0" type="checkbox" value="" {% if subtask.state %}checked{% endif %}>
+		    </div>
+		    <input id="{{ subtask.id }}_subtask-title" type="text" class="form-control border border-0" aria-label="" value="{{ subtask.title }}">
+			<button id="{{ subtask.id }}_subtask-del-btn" class="btn btn-outline-secondary border border-0" type="button"><i class="bi bi-x-circle"></i></button>
+		</div>
+	{% endfor %}
+	{% endif %}
+	<div class="input-group input-group-sm mb-2 py-1 border-bottom">
+		<button class="btn btn-outline-secondary btn-sm border-0" name="{{ task.id }}" type="button" id="button-add-subtask"><i class="bi bi-plus-circle"></i></button>
+		<input id="input-subtask-title" type="text" class="form-control border-0" placeholder="Добавить подзадачу" aria-label="">
+	</div>
 </div>
+<div class="list-group my-2">
+	<input id="task-priority" type="text" class="form-control rounded-bottom-0" data-bs-toggle="dropdown" placeholder="Приоритет" readonly="readonly">
+	<ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="#">Высокий</a></li>
+      <li><a class="dropdown-item" href="#">Обычный</a></li>
+		<li><a class="dropdown-item" href="#">Низкий</a></li>
+    </ul>
+	<input id="task-repeat"type="number" class="form-control rounded-0" placeholder="Количество повторений">
+	<input id="task-deadline" type="datetime-local" class="form-control rounded-0" placeholder="Срок">
+	<input id="task-period" type="text" class="form-control rounded-top-0" data-bs-toggle="dropdown" placeholder="Период повторений" readonly="readonly">
+	<ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="#">Ежедневно</a></li>
+      <li><a class="dropdown-item" href="#">Еженедельно</a></li>
+		<li><a class="dropdown-item" href="#">Ежегодно</a></li>
+    </ul>
+</div>
+<div class="list-group my-2">
+	<input id="task-worker" type="text" class="form-control" data-bs-toggle="dropdown" placeholder="Назначить" readonly="readonly">
+	<ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="#">Себе</a></li>
+      <li><a class="dropdown-item" href="#">Другому себе</a></li>
+    </ul>
+</div>
+<div class="list-group my-2">
+	<input type="file" class="form-control " placeholder="Прикрепить файл">
+</div>
+<div class="list-group my-2">
+	<textarea id="task-note" class="form-control mb-2 " rows="4" placeholder="Заметка">Заметка</textarea>
+</div>
+{% endif %}

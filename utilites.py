@@ -91,18 +91,38 @@ def find_info(module_name, text):
     result = {}
     # Заменяем слова на ключевые слова с разделителем
     command_info_dict = command_information | command_num_information  # складываем 2 словаря для нахождения ключей
+    # проверка условия если в modules[module_name]['info'] есть ключевое слово comment то проверяются
+    # значения из словаря command_info_dict['comment'] и заменяется его значение значением ключа comment и
+    # запоминается позиция вхождения ключевого слова в тексте
+    comment_start = len(text)
+    if 'comment' in modules[module_name]['info']:
+        for value in command_info_dict['comment']:
+            # Находим позицию первого вхождения ключевого слова
+            comment_start = text.lower().find(value)
+            if comment_start != -1:
+                # Находим позицию следующего пробела после ключевого слова
+                end = text.find(' ', comment_start)
+                if end == -1:
+                    end = len(text)  # Если пробел не найден, заменяем до конца текста
+                # Заменяем весь фрагмент ключевым словом и разделителем
+                text = text[:comment_start] + delimiter + 'comment' + text[end:]
+                replacements_made = True
+                break  # Прекращаем поиск после первой замены для данного ключа
+
     for info_type in modules[module_name]['info']:
         if info_type == 'time':
             result = {'time': parse_time(text)}
             continue
+        if info_type == 'comment':
+            continue
         for value in command_info_dict[info_type]:
-            # Находим позицию первого вхождения ключевого слова
-            start = text.lower().find(value)
+            # Находим позицию первого вхождения ключевого слова до вхождения ключа comment
+            start = text.lower().find(value, 0, comment_start)
             if start != -1:
                 # Находим позицию следующего пробела после ключевого слова
                 end = text.find(' ', start)
                 if end == -1:
-                    end = len(text)  # Если пробел не найден, заменяем до конца текста
+                    end = comment_start  # Если пробел не найден, заменяем до конца текста
                 # Заменяем весь фрагмент ключевым словом и разделителем
                 text = text[:start] + delimiter + info_type + text[end:]
                 replacements_made = True
@@ -231,16 +251,14 @@ def save_to_base(message):
         del message['table_name']
     try:
         current_date = datetime.now().strftime("%Y-%m-%d")
-        current_time = datetime.now().strftime("%H:%M")
+        current_time = datetime.now().strftime("%H:%M:%S")
         columns = []
         values = []
         if table_name == 'trading_journal':
-            message['date'] = current_date
             trading_day = message.get('trading_day', current_date)
             message['trading_day'] = trading_day
-            message['time'] = current_time
-        if table_name in ('diary', 'project_journal', 'backtest_journal'):
-            message['date'] = current_date
+        if table_name in ('diary', 'project_journal', 'backtest_journal', 'trading_journal'):
+            message['date'] = f'{current_date} {current_time}'
             message['time'] = current_time
             # Собираем названия столбцов и их значения из словаря message
 
@@ -336,11 +354,11 @@ def check_keys_in_message(message):
 
 
 def save_files(files):
+    files_names = []
     try:
         files_list = files.get('files_list', None)
         dir_name = files.get('dir_name', None)
         print(f'save_files: files_list: {files_list}, dir_name: {dir_name}')
-        files_names = []
         if files_list is None or dir_name is None:
             return 'Не получены файлы для загрузки'
         if files_list:
