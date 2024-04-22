@@ -133,5 +133,19 @@ body{margin-top:20px;}
   right: 0;
 }
 
+/* Стили для активных элементов списка */
+.list-group-item.active {
+    background-color: #dcdcdc;
+    color: #000000;
+    border-color: #b8b8b8;
+}
+
+.list-group-item:hover {
+    background-color: #ececec;
+    color: #000000;
+    background-color: #d8d8d8;
+}
+
+
 /*-------message-template 2 -----------*/
 

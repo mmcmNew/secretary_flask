@@ -117,18 +117,6 @@ class Project(db.Model):
     name = db.Column('ProjectName', db.String(255))
 
 
-class Task(db.Model):
-    __tablename__ = 'tasks'
-    id = db.Column('TaskID', db.Integer, primary_key=True)
-    title = db.Column('Title', db.String(255))
-    description = db.Column('Description', db.Text)
-    due_date = db.Column('DueDate', db.Date)
-    task_type = db.Column('Type', db.String(255))
-    status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'))
-    priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
-    interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
-
-
 class List(db.Model):
     __tablename__ = 'lists'
     id = db.Column('ListID', db.Integer, primary_key=True)
@@ -157,6 +145,24 @@ class Group(db.Model):
     __tablename__ = 'groups'
     id = db.Column('GroupID', db.Integer, primary_key=True)
     name = db.Column('GroupName', db.String(255))
+
+
+class Task(db.Model):
+    __tablename__ = 'tasks'
+    id = db.Column('TaskID', db.Integer, primary_key=True)
+    title = db.Column('Title', db.String(255))
+    description = db.Column('Description', db.Text)
+    deadline = db.Column('Deadline', db.DateTime)
+    task_type = db.Column('Type', db.String(255))
+    attachments = db.Column('Attachments', db.String(255))
+    note = db.Column('Note', db.Text)
+    status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
+    priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
+    interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
+
+    status = db.relationship('Status', backref='tasks', foreign_keys=[status_id])
+    priority = db.relationship('Priority', backref='tasks', foreign_keys=[priority_id])
+    interval = db.relationship('Interval', backref='tasks', foreign_keys=[interval_id])
 
 
 # Вспомогательная таблица для связи между задачами и подзадачами
@@ -205,7 +211,6 @@ List.projects = db.relationship('Project', secondary='list_project_relations', b
 List.groups = db.relationship('Group', secondary='list_group_relations', back_populates='lists')
 Group.lists = db.relationship('List', secondary='list_group_relations', back_populates='groups')
 
-# Установка связей один-ко-многим
-Status.tasks = db.relationship('Task', backref='status')
-Priority.tasks = db.relationship('Task', backref='priority')
-Interval.tasks = db.relationship('Task', backref='interval')
+'''Task.status = db.relationship('Status', backref='tasks')
+Task.priority = db.relationship('Priority', backref='tasks')
+Task.interval = db.relationship('Interval', backref='tasks')'''

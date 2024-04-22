@@ -3,8 +3,11 @@ import random
 import re
 import sqlite3
 from datetime import datetime
+from config import db_name
 
 modules = {
+    'tasks': {'words': ['задач'], 'commands_list': ['create', 'filter', 'edit', 'del'],
+              'info': ['subtask', 'task_name', 'status', 'list'], 'type': 'task'},
     'timer': {'words': ['таймер', 'напомни'], 'commands_list': ['start', 'stop', 'edit', 'del'],
               'info': ['name', 'time'], 'type': 'component'},
     'metronome': {'words': ['метроном'], 'commands_list': ['start', 'stop', 'edit', 'del'],
@@ -27,10 +30,11 @@ modules = {
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
-                 'create': ['запиши', 'добавь запись'],
+                 'create': ['запиши', 'добавь запись', 'создай'],
                  'append': ['допиши', 'до пиши', 'да пиши'],
-                 'edit': ['перезапиши'],
-                 'del': ['удали']}
+                 'edit': ['перезапиши', 'отметь', 'добавь'],
+                 'del': ['удали'],
+                 'filter': ['озвучь', 'перечисли']}
 
 command_information = {'name': ['назван', 'назови', 'напомни'],
                        'trading_day': ['сегодня'],
@@ -44,7 +48,11 @@ command_information = {'name': ['назван', 'назови', 'напомни'
                        'lessons': ['урок'],
                        'project_name': ['проект'],
                        'step': ['этап'],
-                       'score': ['оценк']}
+                       'score': ['оценк'],
+                       'status': ['отметь', 'статус'],
+                       'task_name': ['задач'],
+                       'subtask': ['подзадач', 'под задач'],
+                       'list': ['список'],}
 
 command_num_information = {'bpm': ['частота', 'чистота'],
                            'interval': ['интервал'],
@@ -220,7 +228,7 @@ def save_to_base_modules(command):
             command_info['files'] = ''
             for file_name in files_names:
                 command_info['files'] += file_name + ';'
-    print(f'save_to_base_modules: command_info: {command_info}')
+    # print(f'save_to_base_modules: command_info: {command_info}')
 
     match command_type:
         case 'create':
@@ -246,7 +254,7 @@ def save_to_base_modules(command):
 
 def save_to_base(message):
     table_name = message.get('table_name', '')
-    print(f'save_to_base: message: {message}')
+    # print(f'save_to_base: message: {message}')
     if table_name:
         del message['table_name']
     try:
@@ -262,7 +270,7 @@ def save_to_base(message):
             message['time'] = current_time
             # Собираем названия столбцов и их значения из словаря message
 
-        print(f'save_to_base: message: {message}')
+        # print(f'save_to_base: message: {message}')
         for key, value in message.items():
             try:
                 columns.append(key)
@@ -274,7 +282,7 @@ def save_to_base(message):
                 print(e)
         # Формируем строку запроса
         query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join(['?' for _ in columns])})"
-        connection = sqlite3.connect('new_base.db')
+        connection = sqlite3.connect(db_name)
         cursor = connection.cursor()
         cursor.execute(query, tuple(values))
 
@@ -298,7 +306,7 @@ def append_to_base(message):
         if table_name is None or message == {}:
             return f'Уточните что нужно добавить в журнал'
 
-        connection = sqlite3.connect('new_base.db')
+        connection = sqlite3.connect(db_name)
         cursor = connection.cursor()
         print(f'append_to_base: message: {message}')
         cursor.execute(f"SELECT MAX(id) FROM {table_name}")
@@ -335,7 +343,7 @@ def append_to_base(message):
 
 def check_keys_in_message(message):
     table_name = message.get('table_name', None)
-    connection = sqlite3.connect('new_base.db')
+    connection = sqlite3.connect(db_name)
     cursor = connection.cursor()
     cursor.execute(f"PRAGMA table_info({table_name})")
     columns_info = cursor.fetchall()

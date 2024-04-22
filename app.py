@@ -6,21 +6,34 @@ from datetime import datetime
 
 import random
 
+from rapidfuzz import fuzz, process
+
 from flask import Flask, render_template, jsonify, request
+from flask_ngrok2 import run_with_ngrok
+
 from flask_admin import Admin
 from models import *
 from admin import MyModelView
 from sqlalchemy import or_
+from flask_wtf import CSRFProtect
+
+from config import db_name, NGROK_AUTH_TOKEN
+from forms import TaskForm
 
 from modules.geminiVPN import gemini_proxy_response
-from utilites import find_target_module, save_to_base, save_to_base_modules, find_info, generate_cards
+from utilites import (find_target_module, save_to_base, save_to_base_modules, find_info, generate_cards,
+                      find_command_type)
 from text_to_edge_tts import tts
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///F:/Projects/Python/jinja2/secretary/new_base.db'
+db_path = os.path.join(os.path.dirname(__file__), db_name)
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'my_secret'
+
+# csrf = CSRFProtect(app)
+run_with_ngrok(app, auth_token=NGROK_AUTH_TOKEN)
 
 # Инициализация SQLAlchemy с текущим приложением
 db.init_app(app)
@@ -114,14 +127,14 @@ def list_groups():
             'group_name': group.name,
             # Для каждого списка подсчитываем количество задач
             'lists': [
-                {'id': f'{lst.id}_{group.id}_list', 'name': lst.name, 'task_count': len(lst.tasks)}
+                {'list_id': lst.id, 'name': lst.name, 'task_count': len(lst.tasks)}
                 for lst in group.lists
             ]
         })
 
-    # Также подсчитываем задачи для негруппированных списков
+    # Также подсчитываем задачи для несгруппированных списков
     ungrouped_data = [
-        {'id': f'{lst.id}_list', 'name': lst.name, 'task_count': len(lst.tasks)}
+        {'list_id': lst.id, 'name': lst.name, 'task_count': len(lst.tasks)}
         for lst in ungrouped_lists
     ]
 
@@ -139,6 +152,38 @@ def list_groups():
 
     # print(f'list_groups: {to_do_groups}')
     return to_do_groups
+
+
+def generate_list_html(list_id):
+    tasks_list = List.query.get(list_id)
+    if tasks_list:
+        list_data = {'list_id': tasks_list.id, 'name': tasks_list.name, 'task_count': len(tasks_list.tasks)}
+        html_content = render_template('to_do/tasks_list.html', lst=list_data)
+    return html_content
+
+
+def update_tasks_list(list_id, params={}):
+    list_name = params.get('list_name', None)
+    if list_id:
+        target_list = db.session.get(List, list_id)
+        if target_list:
+            target_list.name = list_name
+            db.session.add(target_list)
+            db.session.commit()
+
+
+@app.route('/update_list', methods=['POST'])
+def update_list():
+    list_id = request.form.get('list_id', None)
+    list_name = request.form.get('list_name', None)
+    if list_name:
+        update_tasks_list(list_id, {'list_name': list_name})
+
+    print(f'update_list: list_id: {list_id}, list_name: {list_name}')
+
+    list_html = generate_list_html(list_id)
+
+    return jsonify({'success': True, 'html': list_html})
 
 
 @app.route('/add_list', methods=['POST'])
@@ -159,26 +204,50 @@ def add_object():
     return jsonify({'success': True, 'message': 'Объект добавлен'})
 
 
-@app.route('/add_task', methods=['POST'])
-def add_task():
-    title = request.form.get('title')
-    list_id = request.form.get('list_id', 'default')
-    task_id = request.form.get('task_id', None)
-    print(f'add_task: title: {title}, list_id: {list_id}, task_id: {task_id}')
+def set_subtask_status(task):
+    for subtask in task.subtasks:
+        subtask.status = task.status
+        set_subtask_status(subtask)
+        db.session.add(subtask)
 
-    new_task = Task(title=title)
+
+@app.route('/update_task', methods=['POST'])
+def update_task():
+    task_id = request.form.get('task_id', None)
+    task_title = request.form.get('task_title', None)
+    task_status = request.form.get('task_status',  None)
+    task_type = request.form.get('task_type',  None)
+    task_list_id = request.form.get('task_list_id',  None)
+    print(f'update_task: task_id: {task_id}, task_title: {task_title}, task_status: {task_status}, '
+          f'task_type: {task_type}, task_list_id: {task_list_id}')
 
     if task_id:
         target_task = db.session.get(Task, task_id)
         if target_task:
-            new_task.task_type = 'subtask'
-            target_task.subtasks.append(new_task)
+            if task_status == 'true':
+                target_task.status = db.session.get(Status, 2)
+                set_subtask_status(target_task)
+            else:
+                target_task.status = db.session.get(Status, 1)
+
             db.session.add(target_task)
             db.session.commit()
             task_data = build_task_structure(target_task)
             task_data['expanded'] = True
+            print(f'update_task: task_data: {task_data}')
             new_task_div = render_template('to_do/tasks.html', tasks=[task_data])
-            return jsonify({'success': True, 'div': new_task_div, 'div_id': task_data['id']})
+            return jsonify({'success': True, 'div': new_task_div, 'div_id': task_data['random_id']})
+
+    return jsonify({'success': False, 'message': 'Не удалось обновить задачу'})
+
+
+@app.route('/add_task', methods=['POST'])
+def add_task():
+    title = request.form.get('title')
+    list_id = request.form.get('list_id', 'default')
+    print(f'add_task: title: {title}, list_id: {list_id}, task_id: {task_id}')
+
+    new_task = Task(title=title)
 
     if list_id in ['default', 'myday', 'tasks']:
         new_task = Task(title=title)
@@ -195,6 +264,23 @@ def add_task():
         return jsonify({'success': True, 'message': 'Задача успешно добавлена'})
 
     return jsonify({'success': False, 'message': 'Недостаточно данных для добавления задачи'})
+
+
+@app.route('/add_subtask', methods=['POST'])
+def add_subtask():
+    title = request.form.get('title')
+    task_id = request.form.get('task_id')
+    target_task = db.session.get(Task, task_id)
+    if target_task:
+        new_task = Task(title=title)
+        new_task.task_type = 'subtask'
+        target_task.subtasks.append(new_task)
+        db.session.add(new_task)
+        db.session.commit()
+        task_data = build_task_structure(target_task)
+        task_data['expanded'] = True
+        new_task_div = render_template('to_do/tasks.html', tasks=[task_data])
+        return jsonify({'success': True, 'div': new_task_div, 'div_id': task_data['random_id']})
 
 
 @app.route('/get_tasks', methods=['GET'])
@@ -214,8 +300,6 @@ def get_tasks():
     for task in tasks_query:
         tasks_data.append(build_task_structure(task))
 
-    # print(f'get_tasks: tasks_data: {tasks_data}')
-    # Генерация HTML для списка задач, предполагаем наличие подходящего шаблона
     tasks_html = render_template('to_do/tasks.html', tasks=tasks_data)
     return jsonify({'html': tasks_html})
 
@@ -232,40 +316,46 @@ def build_task_structure(task):
     div_time = datetime.now().strftime("%Y%m%d%H%M%S")
     random_id = random.randint(1000, 9999)
     task_data = {
-        'id': f'{task.id}_{div_time}{random_id}',
+        'random_id': f'{task.id}_{div_time}{random_id}',
         'task_id':  task.id,
         'title': task.title,
+        'status': task.status.id,
         'type': 'accordion' if task.subtasks else 'regular',
-        'children': []
+        'subtasks': []
     }
     # print(task_data)
     for subtask in task.subtasks:
-        task_data['children'].append(build_task_structure(subtask))
+        task_data['subtasks'].append(build_task_structure(subtask))
     task_data['subtasks_count'] = len(task.subtasks)
     return task_data
 
 
-@app.route('/get_tasks_edit', methods=['GET'])
+@app.route('/get_tasks_edit', methods=['GET', 'POST'])
 def get_tasks_edit():
-    task_id = request.args.get('task_id')
-    task = Task.query.get(task_id)
+    task_id = request.args.get('taskId')
+    task_div_id = request.args.get('taskDivId')
     task_data = {}
+    print(f'get_tasks_edit: task_id: {task_id}, task_div_id: {task_div_id}')
+    if task_id:
+        task = db.session.get(Task, task_id)
     if task:
-        task_data['id'] = task_id
-        task_data['title'] = task.title
-        task_data['note'] = task.description
-        if task.status:
-            task_data['status'] = task.status.name
-        if task.priority:
-            task_data['priority'] = task.priority.name
-        if task.interval:
-            task_data['interval'] = task.interval.name
-        if task.due_date:
-            task_data['due_date'] = task.due_date.strftime('%Y-%m-%d')
-        if task.subtasks:
-            task_data['subtasks'] = task.subtasks
-    task_edit_html = render_template('to_do/task_edit.html', task=task_data)
-    return jsonify({'html': task_edit_html})
+        form = TaskForm(obj=task)
+        print(form.data)
+        task_data['task_id'] = task_id
+        task_data['random_id'] = task_div_id
+
+        if request.method == 'POST' and form.validate_on_submit():
+            event = Event()
+            form = EventForm(request.POST)
+            form.populate_obj(event)
+            db.session.commit()
+
+        task_edit_html = render_template('to_do/task_edit.html', task=task_data, form=form)
+        result = {'status': 'success', 'html': task_edit_html}
+    else:
+        result = {'status': 'error', 'message': 'Задача не найдена'}
+
+    return jsonify(result)
 
 
 @app.route('/test')
@@ -314,7 +404,7 @@ def check_results():
     correct_count = 0
     incorrect_count = 0
     for index, word in enumerate(user_words):
-        if index < len(original_words) and word == original_words[index]:
+        if index < len(original_words) and word.strip() == original_words[index].strip():
             correct_count += 1
             result_words.append(word)
         else:
@@ -331,6 +421,77 @@ def check_results():
     final_result = f'Результат: {correct_percentage}% ({correct_count}/{total_words}). <br>{result_text}'
 
     return jsonify(final_result)
+
+
+def task_module(command, data):
+    command_type = find_command_type(command['target_module'], command['text'])
+    subtask = data.get('subtask', None)
+    task_name = data.get('task_name', None)
+    task_description = data.get('description', None)
+    task_status = data.get('status', None)
+    task_priority = data.get('priority', None)
+    task_interval = data.get('interval', None)
+    task_due_date = data.get('due_date', None)
+    task_list = data.get('list', None)
+    print(f'task_module: data: {data}')
+    print(f'task_module: command_type: {command_type}')
+    target_list = None
+    if task_list:
+        lists = List.query.all()
+        list_name_matches = process.extractOne(task_list, [list.name for list in lists])
+        if list_name_matches[1] > 80:
+            target_list = List.query.filter_by(name=list_name_matches[0]).first()
+            print(f'task_module: target_list: {target_list}')
+
+    if command_type == 'create':
+        if subtask:
+            # получить список всех задач
+            tasks = Task.query.all()
+            # используя rapidfuzz и метод process.extractOne() найти задачу с таким же именем
+            task_name_matches = process.extractOne(task_name, [task.title for task in tasks])
+            # если задача с таким именем найдена создаем новую задачу с типом подзадача
+            if task_name_matches[1] > 80:
+                new_task = Task(title=subtask, description=task_description, status=task_status,
+                                priority=task_priority, interval=task_interval, due_date=task_due_date,
+                                task_type='subtask')
+                # добавляем подзадачу к задаче
+                target_task = Task.query.filter_by(title=task_name_matches[0]).first()
+                if target_task:
+                    target_task.subtasks.append(new_task)
+
+                db.session.add(new_task)
+                db.session.commit()
+                return {'status': 'success', 'message': f'Подзадача {new_task.title} для задачи {target_task.title} создана'}
+            else:
+                return {'status': 'error', 'message': f'Задача {task_name} не найдена'}
+        else:
+            print(f'Создаем задачу. task_name: {task_name}')
+            new_task = Task(title=task_name, description=task_description, status=task_status,
+                            priority=task_priority, interval=task_interval, due_date=task_due_date)
+            if target_list:
+                print(f'Создаем задачу. target_list: {target_list.name}')
+                target_list.tasks.append(new_task)
+            db.session.add(new_task)
+            db.session.commit()
+            return {'status': 'success', 'message': f'Задача {new_task.title} создана'}
+
+    if command_type == 'edit':
+        tasks = Task.query.all()
+        task_name_matches = process.extractOne(task_name, [task.title for task in tasks])
+        if task_name_matches[1] > 80:
+            target_task = Task.query.filter_by(title=task_name_matches[0]).first()
+            if task_name:
+                target_task.title = task_name
+            if target_list:
+                target_list.tasks.append(target_task)
+            if task_status:
+                target_task.status = db.session.get(Status, 2)
+                set_subtask_status(target_task)
+        # обновить задачу в базе
+        db.session.commit()
+        return {'status': 'success', 'message': f'Поздравляю с завершением задачи'}
+
+    return {'status': 'error', 'message': f'Проблемы при создании задачи'}
 
 
 @app.route('/new-message', methods=['POST'])
@@ -382,6 +543,12 @@ def new_message():
                 # Если целевой модуль ai передаем всю команду
                 gemini_answer = gemini_proxy_response(text)
                 ai_answer = {'user_id': 3, 'text': gemini_answer}
+            case 'task':
+                command = {'target_module': target_module, 'text': text}
+                task_data = find_info(target_module, text.replace('под задач', 'подзадач'))
+                result = task_module(command, task_data)
+                ai_answer = {'user_id': 2, 'text': f'{result['message']}'}
+                message_type = 'task'
             case _:
                 ai_answer = {'user_id': 2, 'text': 'Уточните запрос'}
 
@@ -437,5 +604,6 @@ def action_module_processing(module_name):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
+    # app.run(debug=True)
     # app.run(host='0.0.0.0')

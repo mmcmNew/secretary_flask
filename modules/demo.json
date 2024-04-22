@@ -126,14 +126,14 @@
 			"text": "Метроном протикал 8 раз."
 		  },
 		  {
-			"type": "text",
-			"text": "Поздравляю с завершением сценария"
+			"type": "audio",
+			"name": "Сценарий завершен",
+			"url": "proydennyiy-uroven-v-kompyuternoy-igre.wav"
 		  },
 		  {
-			"type": "audio",
-			"name": "Bad Boy - Nightcore Reality",
-			"url": "Nightcore_Reality_-_Bad_Boy_77168470.mp3"
-		  }
+			"type": "text",
+			"text": "Поздравляю с завершением сценария"
+		  }		  
 		]
 	  }
 	]

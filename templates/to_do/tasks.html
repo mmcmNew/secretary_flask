@@ -1,16 +1,13 @@
 {% from "to_do/accordion_macros.html" import render_accordion %}
+{% from "to_do/task_macros.html" import render_task %}
 
 
-{% for item in tasks %}
-<div id="{{ item.id }}_taskDiv" name="{{ item.task_id }}">
-    {% if item.type == 'accordion' %}
-        {{ render_accordion(item) }}
+{% for task in tasks %}
+    {% if task.type == 'accordion' %}
+        {{ render_accordion(task) }}
     {% else %}
-        <a id="{{ item.id }}_task" href="#" class="list-group-item list-group-item-action">
-            <input class="form-check-input me-1" type="checkbox" value="" id="{{ item.id }}_checkBox">
-            <label class="label">{{ item.title }}</label>
-        </a>
+        {{ render_task(task) }}
     {% endif %}
-</div>
+
 {% endfor %}
 

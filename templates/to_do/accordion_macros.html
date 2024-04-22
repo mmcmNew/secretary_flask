@@ -1,33 +1,39 @@
-{% macro render_accordion(item, level=0) %}
-<div class="accordion-item" style="height: 100%">
-    <div id="{{ item.id }}_task" class="accordion-header p-0 d-flex list-group-item list-group-item-action">
-        <div class="p-2">
-            <input class="form-check-input me-1" type="checkbox" value="" id="{{ item.id }}_checkBox">
-        </div>
-        <button id="{{ item.id }}_accordionBtn" class="p-2 accordion-button" data-bs-toggle="collapse"
-             data-bs-target="#{{ item.id }}_collapse" aria-expanded="{{ item.expanded|default('false') }}" aria-controls="{{ item.id }}_collapse" style="cursor: pointer; font-size: 1em">
-            <label class="form-check-label">{{ item.title }}</label>
-        </button>
-        <div style="display: flex; align-items: center;">
-            <span class="badge bg-primary rounded-pill">{{ item.subtasks_count| default(0) }}</span>
-        </div>
-    </div>
-    <div id="{{ item.id }}_collapse" class="accordion-collapse collapse ms-2 {{ 'show' if item.expanded|default(false) }}"
-         aria-labelledby="heading_{{ item.id }}">
-        <div class="list-group">
-            {% for subitem in item.children %}
-                <div id="{{ subitem.id }}_taskDiv" name="{{ subitem.task_id }}">
-                {% if subitem.type == 'accordion' %}
-                    {{ render_accordion(subitem, level + 1) }}
-                {% else %}
-                    <a id="{{ subitem.id }}_task" href="#" class="list-group-item list-group-item-action">
-                        <input class="form-check-input me-1" type="checkbox" value="" id="{{ subitem.id }}_checkBox">
-                        <label class="form-check-label">{{ subitem.title }}</label>
-                    </a>
-                {% endif %}
-                </div>
-            {% endfor %}
-        </div>
-    </div>
+{% from "to_do/task_macros.html" import render_task %}
+
+{% macro render_accordion(task, level=0) %}
+<div id="{{ task.random_id }}_taskDiv">
+	<div class="accordion-item" style="height: 100%">
+		<div class="accordion-header p-0 d-flex list-group-item list-group-item-action"
+		     data-task-id="{{ task.task_id }}" data-parent-id="{{ task.random_id }}">
+			<div class="p-2">
+				<input class="form-check-input ms-2 me-1" type="checkbox"
+				       data-task-id="{{ task.task_id }}" data-parent-id="{{ task.random_id }}"
+				       {{ "checked" if task.status == 2 }}>
+			</div>
+			<button id="{{ task.random_id }}_accordionBtn" class="p-2 accordion-button" data-bs-toggle="collapse"
+			        data-bs-target="#{{ task.random_id }}_collapse" aria-expanded="{{ task.expanded|default('false') }}"
+			        aria-controls="{{ task.random_id }}_collapse" style="cursor: pointer; font-size: 1em"
+			        data-task-id="{{ task.task_id }}" data-parent-id="{{ task.random_id }}">
+				<label class="form-check-label {% if task.status == 2 %} text-decoration-line-through {% endif %}">{{
+					task.title }}</label>
+			</button>
+			<div style="display: flex; align-items: center;">
+				<span class="badge bg-primary rounded-pill me-2">{{ task.subtasks_count | default(0) }}</span>
+			</div>
+		</div>
+		<div id="{{ task.random_id }}_collapse"
+		     class="accordion-collapse collapse ms-2 {{ 'show' if task.expanded|default(false) }}"
+		     aria-labelledby="heading_{{ task.random_id }}">
+			<div class="list-group">
+				{% for subtask in task.subtasks %}
+				{% if subtask.type == 'accordion' %}
+				{{ render_accordion(subtask, level + 1) }}
+				{% else %}
+				{{ render_task(subtask) }}
+				{% endif %}
+				{% endfor %}
+			</div>
+		</div>
+	</div>
 </div>
 {% endmacro %}

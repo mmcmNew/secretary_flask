@@ -3,8 +3,8 @@ function togglePlayPause(audioId) {
     let audio = audioContainer.audio || new Audio(audioContainer.getAttribute('data-audio-src'));
     let playPauseButton = document.getElementById(audioId + "_audio_start"); // Кнопка воспроизведения/паузы
     let progressBar = document.getElementById(audioId + "_audio_progress"); // Получаем ползунок прогресса
-
     // Обновление или установка аудио
+
     if (!audioContainer.audio) {
         // Установка слушателей событий только один раз
         audio.addEventListener('loadedmetadata', () => {
