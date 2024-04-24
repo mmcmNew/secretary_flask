@@ -2,10 +2,10 @@
 <div id="{{ task.random_id }}_taskDiv">
 	<a href="#" class="list-group-item list-group-item-action"
 	   data-task-id="{{ task.task_id }}" data-parent-id="{{ task.random_id }}">
-		<input class="form-check-input me-1" type="checkbox"
+		<input class="form-check-input me-1 col-2" type="checkbox"
 		       data-task-id="{{ task.task_id }}" data-parent-id="{{ task.random_id }}"
 		       {{ "checked" if task.status == 2 }}>
-		<label class="form-check-label {% if task.status == 2 %} text-decoration-line-through {% endif %}">{{ task.title
+		<label class="col-10 form-check-label {% if task.status == 2 %} text-decoration-line-through {% endif %}">{{ task.title
 			}}</label>
 	</a>
 </div>

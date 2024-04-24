@@ -30,7 +30,7 @@ modules = {
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
-                 'create': ['запиши', 'добавь запись', 'создай'],
+                 'create': ['запиши', 'добавь запись', 'созда'],
                  'append': ['допиши', 'до пиши', 'да пиши'],
                  'edit': ['перезапиши', 'отметь', 'добавь'],
                  'del': ['удали'],
@@ -245,7 +245,7 @@ def save_to_base_modules(command):
             save_result = append_to_base(command_info)
             result = save_result
         case _:
-            return {'text': f'save_to_base_modules: Команда {command_text} не обработана'}
+            return {'text': f'save_to_base_modules: Команда не обработана'}
 
     if save_files_result:
         result += f' {save_files_result}'

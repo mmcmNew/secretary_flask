@@ -80,7 +80,6 @@ def home():
         {'id': 'nav-home', 'title': 'Home'},
         {'id': 'nav-ToDo', 'title': 'ToDo'},
         {'id': 'nav-contact', 'title': 'Contact'},
-        {'id': 'nav-disabled', 'title': 'Disabled'},
     ]
 
     commands = ['Запустить таймер', 'Запустить метроном', 'Запусти память', 'Фокусировка', 'Расслабление',
@@ -245,7 +244,7 @@ def update_task():
 def add_task():
     title = request.form.get('title')
     list_id = request.form.get('list_id', 'default')
-    print(f'add_task: title: {title}, list_id: {list_id}, task_id: {task_id}')
+    # print(f'add_task: title: {title}, list_id: {list_id}')
 
     new_task = Task(title=title)
 
@@ -256,7 +255,7 @@ def add_task():
         return jsonify({'success': True, 'message': 'Задача успешно добавлена в общий список'})
 
     target_list = List.query.get(list_id)
-    if target_list and not task_id:
+    if target_list:
         # Добавляем задачу в список
         target_list.tasks.append(new_task)
         db.session.add(new_task)
@@ -427,11 +426,6 @@ def task_module(command, data):
     command_type = find_command_type(command['target_module'], command['text'])
     subtask = data.get('subtask', None)
     task_name = data.get('task_name', None)
-    task_description = data.get('description', None)
-    task_status = data.get('status', None)
-    task_priority = data.get('priority', None)
-    task_interval = data.get('interval', None)
-    task_due_date = data.get('due_date', None)
     task_list = data.get('list', None)
     print(f'task_module: data: {data}')
     print(f'task_module: command_type: {command_type}')
@@ -451,9 +445,7 @@ def task_module(command, data):
             task_name_matches = process.extractOne(task_name, [task.title for task in tasks])
             # если задача с таким именем найдена создаем новую задачу с типом подзадача
             if task_name_matches[1] > 80:
-                new_task = Task(title=subtask, description=task_description, status=task_status,
-                                priority=task_priority, interval=task_interval, due_date=task_due_date,
-                                task_type='subtask')
+                new_task = Task(title=subtask, task_type='subtask')
                 # добавляем подзадачу к задаче
                 target_task = Task.query.filter_by(title=task_name_matches[0]).first()
                 if target_task:
@@ -466,8 +458,7 @@ def task_module(command, data):
                 return {'status': 'error', 'message': f'Задача {task_name} не найдена'}
         else:
             print(f'Создаем задачу. task_name: {task_name}')
-            new_task = Task(title=task_name, description=task_description, status=task_status,
-                            priority=task_priority, interval=task_interval, due_date=task_due_date)
+            new_task = Task(title=task_name)
             if target_list:
                 print(f'Создаем задачу. target_list: {target_list.name}')
                 target_list.tasks.append(new_task)
