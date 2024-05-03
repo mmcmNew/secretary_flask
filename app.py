@@ -96,7 +96,7 @@ def home():
         message_data = {
             'id': message.message_id,
             'user_id': message.user_id,
-            'date': message.date.isoformat() if message.date else None,
+            'date': message.date if message.date else None,
             'time': message.time,
             'text': message.text,
             'image': message.files,
@@ -212,32 +212,36 @@ def set_subtask_status(task):
 
 @app.route('/update_task', methods=['POST'])
 def update_task():
-    task_id = request.form.get('task_id', None)
-    task_title = request.form.get('task_title', None)
-    task_status = request.form.get('task_status',  None)
-    task_type = request.form.get('task_type',  None)
-    task_list_id = request.form.get('task_list_id',  None)
-    print(f'update_task: task_id: {task_id}, task_title: {task_title}, task_status: {task_status}, '
-          f'task_type: {task_type}, task_list_id: {task_list_id}')
+    task_id = request.form.get('task_id')
+    print(f'update_task: task_id: {task_id}')
+    if not task_id:
+        return jsonify({'success': False, 'message': 'Не указан ID задачи'})
 
-    if task_id:
-        target_task = db.session.get(Task, task_id)
-        if target_task:
-            if task_status == 'true':
-                target_task.status = db.session.get(Status, 2)
-                set_subtask_status(target_task)
-            else:
-                target_task.status = db.session.get(Status, 1)
+    task = db.session.get(Task, task_id)
+    print(f'update_task: task: {task}')
+    if not task:
+        return jsonify({'success': False, 'message': 'Задача не найдена'})
 
-            db.session.add(target_task)
-            db.session.commit()
-            task_data = build_task_structure(target_task)
-            task_data['expanded'] = True
-            print(f'update_task: task_data: {task_data}')
-            new_task_div = render_template('to_do/tasks.html', tasks=[task_data])
-            return jsonify({'success': True, 'div': new_task_div, 'div_id': task_data['random_id']})
+    form = TaskForm(request.form, obj=task)
+    print(f'update_task: form: {form.data}')
+    if form.validate():
+        task_status = request.form.get('status')
+        status_id = 2 if task_status == 'true' else 1
+        task.status = db.session.get(Status, status_id)
+        set_subtask_status(task)  # Обновление статуса подзадач, если есть такая функция
 
-    return jsonify({'success': False, 'message': 'Не удалось обновить задачу'})
+        db.session.add(task)
+        db.session.commit()
+
+        task_data = build_task_structure(task)
+        task_data['expanded'] = True
+        new_task_div = render_template('to_do/tasks.html', tasks=[task_data])
+        return jsonify({'success': True, 'div': new_task_div, 'div_id': task_data['random_id']})
+    else:
+        print(f"Errors: {form.errors}")  # Логирование ошибок валидации
+        return jsonify({'success': False, 'message': 'Ошибка валидации данных', 'errors': form.errors})
+
+    return jsonify({'success': False, 'message': 'Произошла ошибка'})
 
 
 @app.route('/add_task', methods=['POST'])
@@ -329,32 +333,22 @@ def build_task_structure(task):
     return task_data
 
 
-@app.route('/get_tasks_edit', methods=['GET', 'POST'])
+@app.route('/get_tasks_edit', methods=['GET'])
 def get_tasks_edit():
     task_id = request.args.get('taskId')
     task_div_id = request.args.get('taskDivId')
-    task_data = {}
-    print(f'get_tasks_edit: task_id: {task_id}, task_div_id: {task_div_id}')
-    if task_id:
-        task = db.session.get(Task, task_id)
+    if not task_id:
+        return jsonify({'status': 'error', 'message': 'ID задачи не указан'})
+
+    task = db.session.get(Task, task_id)
     if task:
         form = TaskForm(obj=task)
-        print(form.data)
-        task_data['task_id'] = task_id
-        task_data['random_id'] = task_div_id
-
-        if request.method == 'POST' and form.validate_on_submit():
-            event = Event()
-            form = EventForm(request.POST)
-            form.populate_obj(event)
-            db.session.commit()
-
-        task_edit_html = render_template('to_do/task_edit.html', task=task_data, form=form)
-        result = {'status': 'success', 'html': task_edit_html}
+        print(f'get_task_edit: form: {form.data}')
+        task_edit_html = render_template('to_do/task_edit.html', task={'task_id': task_id, 'random_id': task_div_id},
+                                         form=form)
+        return jsonify({'status': 'success', 'html': task_edit_html})
     else:
-        result = {'status': 'error', 'message': 'Задача не найдена'}
-
-    return jsonify(result)
+        return jsonify({'status': 'error', 'message': 'Задача не найдена'})
 
 
 @app.route('/test')
@@ -488,6 +482,7 @@ def task_module(command, data):
 @app.route('/new-message', methods=['POST'])
 def new_message():
     current_time = datetime.now().strftime("%H:%M")
+    current_date = datetime.now().strftime("%Y-%m-%d")
     text = request.form.get('message')
     message_type = request.form.get('type')
     component_div = ''
@@ -495,7 +490,8 @@ def new_message():
     action_module = None
     # для первого запроса формируем вывод в чат
     if message_type == 'request':
-        message = {'table_name': 'chat_history', 'user_id': 1, 'time': current_time, 'text': text, 'position': 'r'}
+        message = {'table_name': 'chat_history', 'user_id': 1, 'time': current_time, 'date':  current_date,
+                   'text': text, 'position': 'r'}
         result = save_to_base(message)
         print(result)
         message['name'] = 'Me'
@@ -543,7 +539,7 @@ def new_message():
             case _:
                 ai_answer = {'user_id': 2, 'text': 'Уточните запрос'}
 
-        message = {'table_name': 'chat_history', 'user_id': ai_answer['user_id'],
+        message = {'table_name': 'chat_history', 'user_id': ai_answer['user_id'], 'date':  current_date,
                    'time': current_time, 'text': ai_answer['text'], 'position': 'l'}
 
         result = save_to_base(message)
@@ -595,6 +591,6 @@ def action_module_processing(module_name):
 
 
 if __name__ == '__main__':
-    app.run()
-    # app.run(debug=True)
+    # app.run()
+    app.run(debug=True)
     # app.run(host='0.0.0.0')
