@@ -1,5 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms_alchemy import ModelForm, ModelFormField, ModelFieldList
+from wtforms import validators
+from wtforms.fields import SelectField
 from wtforms.fields import FormField
 from wtforms.fields import DateTimeLocalField
 from wtforms.validators import DataRequired
@@ -19,7 +21,7 @@ BaseModelForm = model_form_factory(FlaskForm)
 class PriorityForm(ModelForm):
     class Meta:
         model = Priority
-        include = ['id']
+        include = ['id', 'name']
 
 
 class IntervalForm(ModelForm):
@@ -31,7 +33,7 @@ class IntervalForm(ModelForm):
 class StatusForm(ModelForm):
     class Meta:
         model = Status
-        include = ['id']
+        include = ['id', 'name']
 
 
 class UserForm(ModelForm):
@@ -45,13 +47,19 @@ class SubTaskForm(ModelForm):
         only = ['id', 'title', 'status_id']
 
 
-class TaskForm(ModelForm):
+class TaskForm(BaseModelForm):
     class Meta:
+        csrf = False  # Отключаем CSRF для этой формы
         model = Task
+        # include = ['id', 'title', 'task_type']
 
-    deadline = DateTimeLocalField('Deadline', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
+    deadline = DateTimeLocalField('Deadline', format='%Y-%m-%dT%H:%M', validators=[validators.Optional()])
 
-    priority = ModelFormField(PriorityForm)
-    interval = ModelFormField(IntervalForm)
-    worker = ModelFieldList(FormField(UserForm))
-    subtasks = ModelFieldList(FormField(SubTaskForm))
+    priority = SelectField('Priority', coerce=int, validators=[validators.Optional()])
+    # interval = ModelFormField(IntervalForm)
+    # worker = ModelFieldList(ModelFormField(UserForm))
+    subtasks = ModelFieldList(ModelFormField(SubTaskForm))
+
+    def __init__(self, *args, **kwargs):
+        super(TaskForm, self).__init__(*args, **kwargs)
+        self.priority.choices = [(p.id, p.name) for p in Priority.query.all()]
