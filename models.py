@@ -25,7 +25,7 @@ class ChatHistory(db.Model):
     __tablename__ = 'chat_history'
     message_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
-    date = db.Column(db.Date)
+    date = db.Column(db.Text)
     time = db.Column(db.Text)
     text = db.Column(db.Text)
     files = db.Column(db.Text)
