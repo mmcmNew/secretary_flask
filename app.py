@@ -35,7 +35,7 @@ app.config['SECRET_KEY'] = 'my_secret'
 # csrf = CSRFProtect(app)
 run_with_ngrok(app, auth_token=NGROK_AUTH_TOKEN)
 
-# Инициализация SQLAlchemy с текущим приложением
+# Инициализация SQLAlchemy с текущим приложением 
 db.init_app(app)
 
 # Инициализация Flask-Admin
