@@ -1,6 +1,7 @@
 {% if form.data %}
-<form method="post" action="/submit">
+<form method="post" action="{{ url_for('update_task') }}">
     <!-- form.hidden_tag() -->
+    <input type="hidden" name="task_id" value="{{ task.task_id }}">
     <div id="task-subtasks" class="list-group">
         <textarea class="form-control mb-2" rows="1" placeholder="Название"
                   data-task-id="{{ task.task_id }}" data-parent-id="{{ task.random_id }}"
@@ -26,27 +27,9 @@
         </div>
     </div>
     <div class="list-group my-2">
-        <select class="form-control rounded-bottom-0" name="priority" id="task-priority">
-          <option value="">Приоритет</option>
-          <option value="0">Обычный</option>
-          <option value="1">Низкий</option>
-          <option value="2">Высокий</option>
-        </select>
         {{ form.deadline(class="form-control rounded-0") }}
         <input id="task-repeat" type="number" class="form-control rounded-0" placeholder="Количество повторений">
-        <select class="form-control rounded-top-0" name="interval" id="task-interval" value="">
-          <option value="0">Не повторять</option>
-          <option value="1">Ежедневно</option>
-          <option value="2">Еженедельно</option>
-          <option value="3">Ежемесячно</option>
-        </select>
-    </div>
-    <div class="list-group my-2">
-        <select class="form-control" name="worker" id="task-worker">
-            <option value="">Назначить</option>
-          <option value="0">Себе</option>
-          <option value="1">Другому</option>
-        </select>
+        {{ form.priority() }}
     </div>
     <div class="list-group my-2">
         <input type="file" class="form-control " placeholder="Прикрепить файл">
@@ -54,5 +37,7 @@
     <div class="list-group my-2">
         <textarea id="task-note" name="note" class="form-control mb-2" rows="4" placeholder="Заметка">{{ form.data.note }}</textarea>
     </div>
+
+    <input type="submit" value="Сохранить изменения">
 </form>
 {% endif %}
