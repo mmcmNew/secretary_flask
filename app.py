@@ -33,7 +33,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'my_secret'
 
 # csrf = CSRFProtect(app)
-run_with_ngrok(app, auth_token=NGROK_AUTH_TOKEN)
+# run_with_ngrok(app, auth_token=NGROK_AUTH_TOKEN)
 
 # Инициализация SQLAlchemy с текущим приложением 
 db.init_app(app)
