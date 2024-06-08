@@ -75,12 +75,15 @@ function addSubtask(taskId, subtaskTitle, taskDivId) {
 
 
 function taskStatusUpdate(taskId, isChecked, taskDivId) {
+    if (isChecked) {
+        status_id = 2
+    }
     $.ajax({
             url: '/update_task',
             type: 'POST',
             data: {
                 task_id: taskId,
-                task_status: isChecked
+                status_id: status_id
             },
             success: function (response) {
                 if (isChecked) {

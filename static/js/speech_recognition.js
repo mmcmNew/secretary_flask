@@ -13,7 +13,7 @@ if (window.SpeechRecognition) {
             .join('');
 
         // Проверка на наличие слов "стоп" или "отменить"
-        if (transcript.toLowerCase().includes("стоп") || transcript.toLowerCase().includes("отменить")) {
+        if (transcript.toLowerCase().includes("стоп стоп стоп") || transcript.toLowerCase().includes("отменить")) {
             recognition.stop();  // Прекращаем распознавание
             console.log("Распознавание прервано по команде пользователя.");
         } else if (event.results[0].isFinal) {  // Проверка, является ли результат окончательным
