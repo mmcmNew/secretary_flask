@@ -517,6 +517,7 @@ def new_message():
                 command = {'target_module': target_module, 'text': text}
                 if request.files:
                     command['files'] = request.files
+                    print(f'files: {request.files}')
                 result = save_to_base_modules(command)  # обработчик для модулей которые сохраняют записи в базу
                 ai_answer = {'user_id': 2, 'text': result['text']}
             case 'action_module':
