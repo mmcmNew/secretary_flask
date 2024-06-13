@@ -22,6 +22,10 @@ modules = {
                          'type': 'journal'},
     'diary': {'words': ['дневник'], 'commands_list': ['create', 'append', 'edit', 'del'],
               'info': ['reason', 'score', 'lessons', 'comment'], 'type': 'journal'},
+    'review_journal': {'name': 'отзывов', 'words': ['отзыво'],
+                       'commands_list': ['create', 'append', 'edit', 'del'],
+                       'info': ['name', 'score', 'author', 'problems', 'facts', 'features', 'new_info', 'comment'],
+                       'type': 'journal'},
     'project_journal': {'words': ['разработ'], 'commands_list': ['create', 'append', 'edit', 'del'],
                         'info': ['project_name', 'step', 'comment'], 'type': 'journal'},
     'productivity': {'words': ['фокусир'], 'commands_list': ['start', 'stop'], 'type': 'action_module'},
@@ -30,13 +34,18 @@ modules = {
 
 commands_list = {'start': ['запусти', 'поставь', 'установи'],
                  'stop': ['остановить', 'заверши', 'останови'],
-                 'create': ['запиши', 'добавь запись', 'созда'],
+                 'create': ['запиши', 'добавь запись', 'создай'],
                  'append': ['допиши', 'до пиши', 'да пиши'],
                  'edit': ['перезапиши', 'отметь', 'добавь'],
                  'del': ['удали'],
                  'filter': ['озвучь', 'перечисли']}
 
 command_information = {'name': ['назван', 'назови', 'напомни'],
+                       'author': ['автор'],
+                       'problems': ['проблем'],
+                       'facts': ['факт'],
+                       'features': ['особенност'],
+                       'new_info': ['новые знания'],
                        'trading_day': ['сегодня'],
                        'bias': ['настро'],
                        'news': ['новос'],
@@ -52,7 +61,7 @@ command_information = {'name': ['назван', 'назови', 'напомни'
                        'status': ['отметь', 'статус'],
                        'task_name': ['задач'],
                        'subtask': ['подзадач', 'под задач'],
-                       'list': ['список'],}
+                       'list': ['список'], }
 
 command_num_information = {'bpm': ['частота', 'чистота'],
                            'interval': ['интервал'],
@@ -302,7 +311,7 @@ def append_to_base(message):
     if table_name:
         del message['table_name']
     try:
-        current_time = datetime.now().strftime("%H:%M")
+        current_time = datetime.now().strftime("%H:%M:%S")
         if table_name is None or message == {}:
             return f'Уточните что нужно добавить в журнал'
 
