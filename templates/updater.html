@@ -1,12 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Updater Git</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестовая страница</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+        }
+        .buttons {
+            margin: 20px 0;
+        }
+        .buttons button {
+            margin: 5px;
+        }
+        .output {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-<button>
-    Update
-</button>
+    <div class="container">
+        <h1>Тестовая страница</h1>
+        <input type="text" id="inputField" placeholder="Введите текст">
+        <div class="buttons">
+            <button onclick="testFunction1()">Кнопка 1</button>
+            <button onclick="testFunction2()">Кнопка 2</button>
+            <button onclick="testFunction3()">Кнопка 3</button>
+            <button onclick="testFunction4()">Кнопка 4</button>
+            <button onclick="testFunction5()">Кнопка 5</button>
+        </div>
+        <div class="output" id="outputField">Результат будет здесь</div>
+    </div>
+
+    <script>
+        function testFunction1() {
+            const input = document.getElementById('inputField').value;
+            document.getElementById('outputField').innerText = 'Результат кнопки 1: ' + input;
+        }
+
+        function testFunction2() {
+            const input = document.getElementById('inputField').value;
+            document.getElementById('outputField').innerText = 'Результат кнопки 2: ' + input;
+        }
+
+        function testFunction3() {
+            const input = document.getElementById('inputField').value;
+            document.getElementById('outputField').innerText = 'Результат кнопки 3: ' + input;
+        }
+
+        function testFunction4() {
+            const input = document.getElementById('inputField').value;
+            document.getElementById('outputField').innerText = 'Результат кнопки 4: ' + input;
+        }
+
+        function testFunction5() {
+            const input = document.getElementById('inputField').value;
+            document.getElementById('outputField').innerText = 'Результат кнопки 5: ' + input;
+        }
+    </script>
 </body>
 </html>
