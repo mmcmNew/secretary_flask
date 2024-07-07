@@ -66,7 +66,7 @@ def gemini_proxy_response(text):
     # Отправка запроса
     try:
         start_time = time.time()
-        response = requests.post(url, headers=headers, data=json.dumps(data), proxies=proxies)
+        response = requests.post(url, headers=headers, data=json.dumps(data))  # , proxies=proxies)
         elapsed_time = time.time() - start_time
         print(f"Статус ответа API: {response.status_code}, время: {elapsed_time:.2f} секунд")
        # print(response.text)
