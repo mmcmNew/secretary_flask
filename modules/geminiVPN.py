@@ -95,3 +95,7 @@ def gemini_no_proxy_response(text):
             print(chunk.text)
     except Exception as e:
         print(f'ai_response: {e}')
+
+
+if __name__ == '__main__':
+    print("start_main")
